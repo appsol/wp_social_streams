@@ -1,0 +1,37 @@
+{
+	"name": "appsol/WP_Social_Streams",
+    "description": "Wordpress plugin to show social media metrics and posts",
+    "license": "GPL2",
+    "keywords": ["wordpress"],
+    "authors": [
+        {
+            "name": "Stuart Laverick",
+            "email": "stuart@appropriatesolutions.co.uk"
+        }
+    ],
+    "repositories":
+	[],
+
+	"require": {
+		"php": ">=5.5.0",
+		"google/apiclient": "1.0.*@beta",
+        "facebook/php-sdk-v4": "4.0.*",
+        "abraham/twitteroauth": "0.5.*",
+        "cosenary/instagram": "2.3",
+        "happyr/linkedin-api-client": "0.5.*"
+	},
+
+    "require-dev": {
+        "php": "5.5.*",
+        "phpunit/phpunit": "3.7.*",
+        "wp-cli/wp-cli": "dev-master",
+        "psy/psysh": "dev-master"
+    },
+
+    "autoload": {
+        "psr-4": {
+            "SocialStreams\\": "",
+            "SocialStreams\\": "lib/"
+        }
+    }
+}
