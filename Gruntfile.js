@@ -10,7 +10,8 @@ module.exports = function(grunt) {
   // configure the tasks
   grunt.initConfig({
     pluginDir: 'wp-social-streams',
-    distPath: '../dist/<%= pluginDir %>',
+    distPath: 'dist/<%= pluginDir %>',
+    srcPath: 'src',
 
     pkg: grunt.file.readJSON('package.json'),
 
@@ -26,42 +27,32 @@ module.exports = function(grunt) {
     less: {
       development: {
         options: {
-          paths: 'assets/less',
+          paths: '<%= srcPath %>/assets/less',
+          plugins: [
+            new (require('less-plugin-autoprefix'))({browsers: ["last 2 versions"]})
+          ],
           sourceMap: true,
           sourceMapBasepath: 'less',
           sourceMapRootpath: '/',
           optimization: 9
         },
         files: {
-          'assets/css/style.css': 'assets/less/style.less'
+          '<%= distPath %>/assets/css/style.css': '<%= srcPath %>/assets/less/style.less'
         }
       },
       production: {
         options: {
-          paths: 'assets/less',
+          paths: '<%= srcPath %>/assets/less',
+          plugins: [
+            new (require('less-plugin-autoprefix'))({browsers: ["last 2 versions"]}),
+            new (require('less-plugin-clean-css'))()
+          ],
           cleancss: true,
           compress: true,
           optimization: 1
         },
         files: {
-          'assets/css/style.css': 'assets/less/style.less'
-        }
-      }
-    },
-
-    autoprefixer: {
-      build: {
-        expand: true,
-        cwd: 'assets',
-        src: [ 'css/*.css' ],
-        dest: 'css'
-      }
-    },
-
-    cssmin: {
-      build: {
-        files: {
-          '<%= distPath %>/assets/css/style.min.css': [ 'assets/css/*.css' ]
+          '<%= distPath %>/assets/css/style.min.css': '<%= srcPath %>/assets/less/style.less'
         }
       }
     },
@@ -73,7 +64,7 @@ module.exports = function(grunt) {
         },
         files: [{
           expand: true,                  // Enable dynamic expansion
-          cwd: 'assets/images/',                // Src matches are relative to this path
+          cwd: '<%= srcPath %>/assets/images/',                // Src matches are relative to this path
           src: ['**/*.{png,jpg,gif}'],   // Actual patterns to match
           dest: '<%= distPath %>/assets/img/'              // Destination path prefix
         }]
@@ -84,7 +75,7 @@ module.exports = function(grunt) {
         },
         files: [{
           expand: true,                  // Enable dynamic expansion
-          cwd: 'assets/images/',                // Src matches are relative to this path
+          cwd: '<%= srcPath %>/assets/images/',                // Src matches are relative to this path
           src: ['**/*.{png,jpg,gif}'],   // Actual patterns to match
           dest: '<%= distPath %>/assets/img/'              // Destination path prefix
         }]
@@ -92,7 +83,7 @@ module.exports = function(grunt) {
     },
 
     jshint: {
-      build: ['Gruntfile.js', 'assets/js/main.js', 'assets/js/**/*.js']
+      build: ['Gruntfile.js', '<%= srcPath %>/assets/js/main.js', '<%= srcPath %>/assets/js/**/*.js']
     },
 
     concat: {
@@ -112,8 +103,8 @@ module.exports = function(grunt) {
           // 'bower_components/bootstrap/js/carousel.js',
           // 'bower_components/bootstrap/js/modal.js',
           // 'bower_components/flexslider/jquery.flexslider.js',
-          'assets/js/main.js',
-          'assets/js/**/*.js'
+          '<%= srcPath %>/assets/js/main.js',
+          '<%= srcPath %>/assets/js/**/*.js'
           ],
         dest: '<%= distPath %>/assets//js/script.js'
       }
@@ -135,8 +126,8 @@ module.exports = function(grunt) {
           // 'bower_components/bootstrap/js/carousel.js',
           // 'bower_components/bootstrap/js/modal.js',
           // 'bower_components/flexslider/jquery.flexslider.js',
-          'js/main.js',
-          'js/**/*.js'
+          '<%= srcPath %>/js/main.js',
+          '<%= srcPath %>/js/**/*.js'
           ]
         }
       },
@@ -155,61 +146,67 @@ module.exports = function(grunt) {
           // 'bower_components/bootstrap/js/carousel.js',
           // 'bower_components/bootstrap/js/modal.js',
           // 'bower_components/flexslider/jquery.flexslider.js',
-          'js/main.js',
-          'js/**/*.js'
+          '<%= srcPath %>/js/main.js',
+          '<%= srcPath %>/js/**/*.js'
           ]
         }
       }
     },
- 
+
     copy: {
-      build: {
-        cwd: '.',
-        src: [ 'assets/', 'lib/', '*.php', 'composer.json'],
+      php: {
+        cwd: '<%= srcPath %>/',
+        src: [ 'lib/**/*.php', '*.php', 'composer.json'],
         dest: '<%= distPath %>',
         expand: true
       },
       images: {
         expand: true,                 // Enable dynamic expansion
-        cwd: 'assets/images/',             // Src matches are relative to this path
+        cwd: '<%= srcPath %>/assets/images/',             // Src matches are relative to this path
         src: ['**/*.{png,jpg,gif}'],  // Actual patterns to match
         dest: '<%= distPath %>/assets/img/'           // Destination path prefix
-      },
-      php: {
-        expand: true,
-        cwd: '.',
-        src: ['*.php', 'lib/'],
-        dest: '<%= distPath %>'
+      }
+    },
+
+    composer: {
+      development: {
+        options: {
+          flags: ['no-dev'],
+          cwd: '<%= distPath %>'
+        }
       }
     },
 
     watch: {
       less: {
-        files: 'less/*.less',
-        tasks: 'less'
+        files: '<%= srcPath %>/assets/less/*.less',
+        tasks: 'css'
       },
       scripts: {
-        files: ['js/main.js','js/**/*.js'],
+        files: ['<%= srcPath %>/assets/js/main.js','<%= srcPath %>/assets/js/**/*.js'],
         tasks: [ 'build' ]
       },
       images: {
-        files: [ 'images/**/*'],
+        files: [ '<%= srcPath %>/assets/images/**/*'],
         tasks: [ 'copy:images' ]
       },
       php: {
-        files: '*.php',
+        files: ['<%= srcPath %>/*.php', '<%= srcPath %>/lib/**/*.php'],
         tasks: ['copy:php']
+      },
+      composer: {
+        files: '<%= srcPath %>/composer.json',
+        tasks: ['copy:php', 'composer:development:update']
       }
     }
- 
+
   });
- 
+
   // load the tasks
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-less');
-  grunt.loadNpmTasks('grunt-autoprefixer');
-  grunt.loadNpmTasks('grunt-contrib-cssmin');
+  grunt.loadNpmTasks('grunt-composer');
   grunt.loadNpmTasks('grunt-contrib-imagemin');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-concat');
@@ -220,22 +217,21 @@ module.exports = function(grunt) {
   grunt.registerTask(
     'build',
     'Creates a development version of the files',
-    ['clean', 'css', 'buildScripts', 'copy:images']
+    ['clean:build', 'copy:php', 'composer:development:install', 'css', 'buildScripts', 'copy:images']
     // ['clean', 'css', 'buildScripts', 'imagemin:development']
   );
 
   grunt.registerTask(
     'deploy',
     'Creates a production version of the files',
-    ['clean', 'less:production', 'autoprefixer', 'cssmin', 'deployScripts']
-    // ['clean', 'less:production', 'autoprefixer', 'cssmin', 'deployScripts', 'imagemin:production']
+    ['clean:build', 'less:production', 'deployScripts']
+    // ['clean', 'less:production','deployScripts', 'imagemin:production']
   );
 
   grunt.registerTask(
     'css',
     'Process template.less into compiled.css',
     [ 'less:development' ]
-    // [ 'less:development', 'autoprefixer' ]
   );
 
   grunt.registerTask(

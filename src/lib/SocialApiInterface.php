@@ -1,6 +1,6 @@
 <?php
 /**
- * SocialStreams\Lib\SocialApiInterface
+ * SocialStreams\SocialApiInterface
  *
  * @package wp_social_streams
  * @author Stuart Laverick
@@ -13,7 +13,11 @@ interface SocialApiInterface
 {
     public function getAuthenticationUrl();
 
-    public function authenticateFromRedirect();
+    public function getDisconnectUrl();
 
     public function hasSession();
+
+    public function getLastMessage();
+
+    public function getUser();
 }

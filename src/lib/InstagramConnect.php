@@ -1,6 +1,6 @@
 <?php
 /**
- * SocialStreams\FacebookConnect
+ * SocialStreams\InstagramConnect
  *
  * @package wp_social_streams
  * @author Stuart Laverick
@@ -8,16 +8,11 @@
 
 namespace SocialStreams;
 
-use Facebook\FacebookSession;
-use Facebook\FacebookRequest;
-use Facebook\GraphUser;
-use Facebook\FacebookRequestException;
-use Facebook\FacebookRedirectLoginHelper;
-use Facebook\GraphSessionInfo;
+use MetzWeb\Instagram\Instagram;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
-class FacebookConnect extends SocialApiConnect implements SocialApiInterface
+class InstagramConnect extends SocialApiConnect implements SocialApiInterface
 {
 
     /**
@@ -28,11 +23,15 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function __construct($appId, $appSecret)
     {
-        $this->apiName = 'facebook';
+        $this->apiName = 'instagram';
         $this->appId = $appId;
         $this->appSecret = $appSecret;
         $this->pageUrl  = 'options-general.php?page=' . $_GET["page"] . '&redirect=' . $this->apiName;
-        FacebookSession::setDefaultApplication($this->appId, $this->appSecret);
+        $this->session = new Instagram([
+            'apiKey'      => $this->appId,
+            'apiSecret'   => $this->appSecret,
+            'apiCallback' => admin_url($this->pageUrl)
+        ]);
     }
 
     /**
@@ -43,9 +42,7 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function getAuthenticationUrl()
     {
-        $helper  = new FacebookRedirectLoginHelper(admin_url($this->pageUrl));
-
-        return $helper->getLoginUrl();
+        return $this->session->getLoginUrl(['basic', 'likes']);
     }
 
     /**
@@ -60,27 +57,32 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
-     * Create a valid session from the parameters passed back from Facebook
+     * Create a valid session from the parameters passed back
      *
      * @return void
      * @author Stuart Laverick
      **/
     private function authenticateFromRedirect()
     {
-        $helper = new FacebookRedirectLoginHelper(admin_url($this->pageUrl));
         try {
-          $this->session = $helper->getSessionFromRedirect();
-        } catch (FacebookRequestException $e) {
-        // When Facebook returns an error
-            $this->setLastMessage($e->getMessage(), $ex->getCode());
+            if (!isset($_GET['code'])) {
+                if (isset($_GET['error'])) {
+                    $msg = 'Error Type: ' . $_GET['error'] .
+                    ' Error Reason: ' . $_GET['error_reason'] .
+                    ' Description: ' . urldecode($_GET['error_description']);
+                }
+                throw new \Exception($msg? : 'Incomplete OAuth response');
+            }
+            $code = $_GET['code'];
+            $token = $this->session->getOAuthToken($code);
         } catch (\Exception $e) {
         // When validation fails or other local issues
             $this->setLastMessage($e->getMessage());
         }
-        if ($this->session) {
+        if ($token) {
         // Logged in
-            // print_r($session->getSessionInfo());
-            $this->storeTemporaryData('token', $this->session->getToken());
+            $this->session->setAccessToken($token->access_token);
+            $this->storeTemporaryData('token', $token->access_token);
             return true;
         }
         return false;
@@ -95,13 +97,18 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function hasSession()
     {
-        if ($token = $this->getTemporaryData('token')) {
-            $this->session = new FacebookSession($token);
-            return true;
-        } elseif (isset($_GET['redirect']) && $_GET['redirect'] == $this->apiName) {
-            return $this->authenticateFromRedirect();
+        $hasSession = false;
+        if (isset($_GET['redirect']) && $_GET['redirect'] == $this->apiName) {
+            $hasSession = $this->authenticateFromRedirect();
         }
-        return false;
+        if (isset($_GET['disconnect']) && $_GET['disconnect'] == $this->apiName) {
+            $this->deleteTemporaryData('token');
+        }
+        if ($token = $this->getTemporaryData('token')) {
+            $this->session->setAccessToken($token);
+            $hasSession = true;
+        }
+        return $hasSession;
     }
 
     /**
@@ -112,22 +119,20 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = 'me')
+    public function getUser($userId = 0)
     {
         try {
-          $user = (new FacebookRequest(
-            $this->session, 'GET', '/' . $userId
-          ))->execute()->getGraphObject(GraphUser::className());
-        } catch (FacebookRequestException $e) {
-          // The Graph API returned an error
-            $this->setLastMessage($e->getMessage());
+            $user = $this->session->getUser($userId);
+            if (isset($user->meta->error_type)) {
+                throw new \Exception($user->meta->error_type . ': ' . $user->meta->error_message, $user->meta->code);
+            }
         } catch (\Exception $e) {
           // Some other error occurred
-            $this->setLastMessage($e->getMessage());
+            $this->setLastMessage($e->getMessage(), $e->getCode());
         }
-        if ($user) {
+        if ($user->data) {
             $this->deleteLastMessage();
-            return $user->getName();
+            return $user->data->full_name;
         }
         return false;
     }

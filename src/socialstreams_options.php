@@ -140,7 +140,7 @@ class SocialStreamsOptions
         add_settings_section(
             'socialstreams_twitter', // ID
             'Twitter Options', // Title
-            [$this, 'printSocialMediaApiInfo'], // Callback
+            [$this, 'printTwitterApiInfo'], // Callback
             'socialstreams-setting-admin' // Page
         );
 
@@ -183,7 +183,7 @@ class SocialStreamsOptions
         add_settings_section(
             'socialstreams_youtube', // ID
             'YouTube Options', // Title
-            [$this, 'printSocialMediaApiInfo'], // Callback
+            [$this, 'printYouTubeApiInfo'], // Callback
             'socialstreams-setting-admin' // Page
         );
 
@@ -199,7 +199,7 @@ class SocialStreamsOptions
         add_settings_section(
             'socialstreams_instagram', // ID
             'Instagram Options', // Title
-            [$this, 'printSocialMediaApiInfo'], // Callback
+            [$this, 'printInstagramApiInfo'], // Callback
             'socialstreams-setting-admin' // Page
         );
 
@@ -224,7 +224,7 @@ class SocialStreamsOptions
         add_settings_section(
             'socialstreams_linkedin', // ID
             'LinkedIn Options', // Title
-            [$this, 'printSocialMediaApiInfo'], // Callback
+            [$this, 'printLinkedinApiInfo'], // Callback
             'socialstreams-setting-admin' // Page
         );
 
@@ -298,14 +298,117 @@ class SocialStreamsOptions
      **/
     public function printFacebookApiInfo()
     {
-        print "Enter your API keys and Authentication details";
-        if(!empty($this->options['facebook_app_id']) && !empty($this->options['facebook_app_secret'])) {
+        if (!empty($this->options['facebook_app_id']) && !empty($this->options['facebook_app_secret'])) {
             $fbConnect = new FacebookConnect($this->options['facebook_app_id'], $this->options['facebook_app_secret']);
             if ($fbConnect->hasSession()) {
-                print "Connected";
+                print '<p>Connected as ' . $fbConnect->getUser() . '</p>';
             } else {
-                print '<a class="button button-secondary" href="' . $fbConnect->getAuthenticationUrl() . '">Connect</a>';
+                if ($msg = $fbConnect->getLastMessage()) {
+                    print '<p>' . $msg . '</p>';
+                }
+                print '<p><a class="button button-secondary" href="' . $fbConnect->getAuthenticationUrl() . '">Connect</a></p>';
             }
+        } else {
+            print '<p>Enter your Facebook API keys. See <a target="_blank" href="https://developers.facebook.com/apps/">Facebook Developer Apps</a></p>';
+        }
+    }
+
+    /**
+     * Print the section text for the YouTube API section
+     *
+     * @return void
+     * @author Stuart Laverick
+     **/
+    public function printYouTubeApiInfo()
+    {
+        if (!empty($this->options['youtube_simple_key'])) {
+            $ytConnect = new YoutubeConnect($this->options['youtube_simple_key']);
+            if ($ytConnect->hasSession()) {
+                print '<p>Connected</p>';
+            } else {
+                if ($msg = $ytConnect->getLastMessage()) {
+                    print '<p>' . $msg . '</p>';
+                }
+            }
+        } else {
+            print '<p>Enter your Simple API key. See <a target="_blank" href="https://console.developers.google.com/project?authuser=0">Google Developers Console</a></p>';
+        }
+    }
+
+    /**
+     * Print the section text for the Twitter API section
+     *
+     * @return void
+     * @author Stuart Laverick
+     **/
+    public function printTwitterApiInfo()
+    {
+        if (!empty($this->options['twitter_app_id']) 
+            && !empty($this->options['twitter_app_secret'])
+            && !empty($this->options['twitter_access_token'])
+            && !empty($this->options['twitter_access_token_secret'])) {
+            $twConnect = new TwitterConnect(
+                $this->options['twitter_app_id'],
+                $this->options['twitter_app_secret'],
+                $this->options['twitter_access_token'],
+                $this->options['twitter_access_token_secret']
+            );
+            if ($twConnect->hasSession()) {
+                print '<p>Connected as ' . $twConnect->getUser() . '</p>';
+            } else {
+                if ($msg = $twConnect->getLastMessage()) {
+                    print '<p>' . $msg . '</p>';
+                }
+                print '<p><a class="button button-secondary" href="' . $twConnect->getAuthenticationUrl() . '">Connect</a></p>';
+            }
+        } else {
+            print '<p>Enter your API keys. See <a target="_blank" href="https://apps.twitter.com/">Twitter Application Management</a></p>';
+        }
+    }
+
+    /**
+     * Print the section text for the Instagram API section
+     *
+     * @return void
+     * @author Stuart Laverick
+     **/
+    public function printInstagramApiInfo()
+    {
+        if (!empty($this->options['instagram_app_id']) && !empty($this->options['instagram_app_secret'])) {
+            $igConnect = new InstagramConnect($this->options['instagram_app_id'], $this->options['instagram_app_secret']);
+            if ($igConnect->hasSession()) {
+                print '<p>Connected as ' . $igConnect->getUser() . ' <a class="button button-secondary" href="' . $igConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+            } else {
+                if ($msg = $igConnect->getLastMessage()) {
+                    print '<p>' . $msg . '</p>';
+                }
+                print '<p><a class="button button-secondary" href="' . $igConnect->getAuthenticationUrl() . '">Connect</a></p>';
+            }
+        } else {
+            print '<p>Enter your Instagram API keys. See <a target="_blank" href="https://instagram.com/developer/clients/manage/">Instagram Manage Clients</a></p>';
+        }
+    }
+
+    /**
+     * Print the section text for the LinkedIn API section
+     *
+     * @return void
+     * @author Stuart Laverick
+     **/
+    public function printLinkedinApiInfo()
+    {
+        if (!empty($this->options['linkedin_app_id']) && !empty($this->options['linkedin_app_secret'])) {
+            $liConnect = new InstagramConnect($this->options['linkedin_app_id'], $this->options['linkedin_app_secret']);
+            if ($liConnect->hasSession()) {
+                print '<p>Connected as ' . $liConnect->getUser() . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+            } else {
+                if ($msg = $liConnect->getLastMessage()) {
+                    print '<p>' . $msg . '</p>';
+                }
+                print '<p><a class="button button-secondary" href="' . $liConnect->getAuthenticationUrl() . '">Connect</a></p>';
+            }
+        } else {
+            print '<p>Enter your LinkedIn API keys. See <a target="_blank" href="https://www.linkedin.com/developer/apps">LinkedIn My Applications</a></p>';
         }
     }
 
