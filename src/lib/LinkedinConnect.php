@@ -30,17 +30,26 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
         $this->appId = $appId;
         $this->appSecret = $appSecret;
 
+        parent::__construct();
+
         $credentials = new Credentials(
             $this->appId,
             $this->appSecret,
-            $this->pageUrl
+            $this->pageUrl . '&callback=' . $this->apiName
         );
 
         $storage = new TransientTokenStore();
 
         $serviceFactory = new ServiceFactory();
 
-        $this->session = $serviceFactory->createService('linkedin', $credentials, $storage, ['r_basicprofile']);
+        $this->session = $serviceFactory->createService(
+            'linkedin',
+            $credentials,
+            $storage,
+            ['r_basicprofile'],
+            null,
+            true
+        );
     }
 
     /**
@@ -52,22 +61,25 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function hasSession()
     {
-        $hasSession = false;
-        try {
-            if ($this->session->isGlobalRequestArgumentsPassed()) {
-                $this->session->retrieveAccessTokenByGlobReqArgs();
-                $hasSession = true;
-            }
-            if (isset($_GET['redirect']) && $_GET['redirect'] == $this->apiName) {
-                $this->session->redirectToAuthorizationUri();
-            }
-            if (isset($_GET['disconnect']) && $_GET['disconnect'] == $this->apiName) {
-                $this->deleteTemporaryData('token');
-            }
-        } catch (\Exception $e) {
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        }
+        $hasSession = true;
+        $this->deleteLastMessage();
 
+        if (!$this->hasValidAccessToken()) {
+            $hasSession = false;
+            try {
+                if ($this->session->isGlobalRequestArgumentsPassed()
+                    && isset($_GET['callback'])
+                    && $_GET['callback'] == $this->apiName) {
+                    $this->session->retrieveAccessTokenByGlobReqArgs();
+                    $hasSession = true;
+                }
+                if (isset($_GET['disconnect']) && $_GET['disconnect'] == $this->apiName) {
+                    $this->deleteTemporaryData('token');
+                }
+            } catch (\Exception $e) {
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            }
+        }
         return $hasSession;
     }
 
@@ -81,17 +93,17 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function getUser($userId = '~')
     {
+        // print $this->session->getBaseApiUri() . 'people/' . $userId . '?format=json&oauth2_access_token=' . $this->session->getAccessToken()->getAccessToken();
         try {
-            $user = $this->session->requestJSON('/people/' . $userId . '?format=json');;
+            if ($user = $this->session->requestJSON($this->session->getBaseApiUri() . 'people/' . $userId . '?format=json')) {
+                $this->deleteLastMessage();
+                return $user['firstName'] . ' ' . $user['lastName'];
+            }
         } catch (ExpiredTokenException $e) {
             $this->setLastMessage($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
           // Some other error occurred
             $this->setLastMessage($e->getMessage(), $e->getCode());
-        }
-        if ($user) {
-            $this->deleteLastMessage();
-            return $user['firstName'] . ' ' . $user['lastName'];
         }
         return false;
     }

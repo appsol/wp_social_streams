@@ -19,6 +19,13 @@ class SocialStreamsOptions
     private $options;
 
     /**
+     * Factory object
+     *
+     * @var ConnectionFactory
+     **/
+    private $connectionFactory;
+
+    /**
      * Constructor
      *
      * @return void
@@ -28,6 +35,7 @@ class SocialStreamsOptions
     {
         add_action('admin_menu', array( $this, 'addPluginPage' ));
         add_action('admin_init', array( $this, 'pageInit' ));
+        $this->connectionFactory = new ConnectionFactory();
     }
 
     /**
@@ -398,15 +406,18 @@ class SocialStreamsOptions
     public function printLinkedinApiInfo()
     {
         if (!empty($this->options['linkedin_app_id']) && !empty($this->options['linkedin_app_secret'])) {
-            $liConnect = new InstagramConnect($this->options['linkedin_app_id'], $this->options['linkedin_app_secret']);
-            if ($liConnect->hasSession()) {
-                print '<p>Connected as ' . $liConnect->getUser() . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
-            } else {
-                if ($msg = $liConnect->getLastMessage()) {
-                    print '<p>' . $msg . '</p>';
+
+                $liConnect = $this->connectionFactory->createConnection('linkedin');
+
+                if ($liConnect->hasSession()) {
+                    print '<p>Connected as ' . $liConnect->getUser() . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+                } else {
+                    if ($msg = $liConnect->getLastMessage()) {
+                        print '<p>' . $msg['message'] . '</p>';
+                    }
+                    print '<p><a class="button button-secondary" href="' . $liConnect->getAuthenticationUrl() . '">Connect</a></p>';
                 }
-                print '<p><a class="button button-secondary" href="' . $liConnect->getAuthenticationUrl() . '">Connect</a></p>';
-            }
+            // $liConnect = new LinkedinConnect($this->options['linkedin_app_id'], $this->options['linkedin_app_secret']);
         } else {
             print '<p>Enter your LinkedIn API keys. See <a target="_blank" href="https://www.linkedin.com/developer/apps">LinkedIn My Applications</a></p>';
         }

@@ -11,6 +11,7 @@ use OAuth\Common\Storage\Exception\AuthorizationStateNotFoundException;
 use OAuth\Common\Storage\Exception\StorageException;
 use OAuth\Common\Storage\Exception\TokenNotFoundException;
 use OAuth\Common\Token\TokenInterface;
+use OAuth\Common\Storage\TokenStorageInterface;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
@@ -44,7 +45,7 @@ class TransientTokenStore implements TokenStorageInterface
      **/
     protected $transientLifetime = 2419200;
 
-    public function __construct(argument)
+    public function __construct()
     {
         $this->tokens = get_transient($this->transientPrefix . 'tokens') ? : [];
         $this->states = get_transient($this->transientPrefix . 'states') ? : [];
@@ -57,6 +58,7 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function retrieveAccessToken($service)
     {
+        $service = $this->normaliseServiceName($service);
         if ($this->hasAccessToken($service)) {
             return $this->tokens[ $service ];
         }
@@ -71,7 +73,7 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function storeAccessToken($service, TokenInterface $token)
     {
-        $this->tokens[ $service ] = $token;
+        $this->tokens[ $this->normaliseServiceName($service) ] = $token;
         $this->updateTransient('tokens');
 
         // allow chaining
@@ -84,6 +86,7 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function hasAccessToken($service)
     {
+        $service = $this->normaliseServiceName($service);
         return isset($this->tokens[ $service ]) && $this->tokens[ $service ] instanceof TokenInterface;
     }
 
@@ -95,8 +98,8 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function clearToken($service)
     {
-        if (array_key_exists($service, $this->tokens))
-        {
+        $service = $this->normaliseServiceName($service);
+        if (array_key_exists($service, $this->tokens)) {
             unset($this->tokens[ $service ]);
             $this->updateTransient('tokens');
         }
@@ -129,7 +132,7 @@ class TransientTokenStore implements TokenStorageInterface
     public function retrieveAuthorizationState($service)
     {
         if ($this->hasAuthorizationState($service)) {
-            return $this->states[ $service ];
+            return $this->states[ $this->normaliseServiceName($service) ];
         }
         throw new AuthorizationStateNotFoundException('State not stored');
     }
@@ -143,7 +146,7 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function storeAuthorizationState($service, $state)
     {
-        $this->states[ $service ] = $state;
+        $this->states[ $this->normaliseServiceName($service) ] = $state;
         $this->updateTransient('states');
 
         // allow chaining
@@ -158,6 +161,7 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function hasAuthorizationState($service)
     {
+        $service = $this->normaliseServiceName($service);
         return isset($this->states[ $service ]) && null !== $this->states[ $service ];
     }
 
@@ -170,7 +174,7 @@ class TransientTokenStore implements TokenStorageInterface
     public function clearAuthorizationState($service)
     {
         if (array_key_exists($service, $this->states)) {
-            unset($this->states[ $service ]);
+            unset($this->states[ $this->normaliseServiceName($service) ]);
             $this->updateTransient('states');
         }
 
@@ -203,5 +207,16 @@ class TransientTokenStore implements TokenStorageInterface
     private function updateTransient($name)
     {
         return set_transient($this->transientPrefix . $name, $this->$name, $this->transientLifetime);
+    }
+
+    /**
+     * Returns a normalised key string
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    private function normaliseServiceName($name)
+    {
+        return trim(strtolower($name));
     }
 }

@@ -48,6 +48,13 @@ abstract class SocialApiConnect
     protected $pageUrl;
 
     /**
+     * Public accessible callback handler URL
+     *
+     * @var string
+     **/
+    protected $callbackUrl;
+
+    /**
      * OAuth authenticated session object
      *
      * @var Object
@@ -91,6 +98,7 @@ abstract class SocialApiConnect
     public function __construct()
     {
         $this->pageUrl  = admin_url('options-general.php?page=' . $_GET["page"]);
+        $this->callbackUrl  = plugins_url('callback.php', dirname(__FILE__));
     }
 
     /**
@@ -101,7 +109,7 @@ abstract class SocialApiConnect
      **/
     public function getAuthenticationUrl()
     {
-        return $this->pageUrl . '&redirect=' . $this->apiName;
+        return $this->session->getAuthorizationUri();
     }
 
     /**
@@ -182,5 +190,22 @@ abstract class SocialApiConnect
     {
         $this->lastMessage = null;
         return $this->deleteTemporaryData('last_message');
+    }
+
+    /**
+     * Checks for a locally stored valid access token for the service
+     *
+     * @return bool
+     * @author Stuart Laverick
+     **/
+    public function hasValidAccessToken()
+    {
+        if ($this->session && $this->session->getStorage()->hasAccessToken($this->apiName)) {
+            $token = $this->session->getAccessToken();
+            return $token->getEndOfLife() === TokenInterface::EOL_NEVER_EXPIRES
+            || $token->getEndOfLife() === TokenInterface::EOL_UNKNOWN
+            || time() < $token->getEndOfLife();
+        }
+        return false;
     }
 }
