@@ -7,6 +7,10 @@
  */
 namespace SocialStreams;
 
+use OAuth\Common\Token\TokenInterface;
+use OAuth\Common\Consumer\Credentials;
+use OAuth\ServiceFactory;
+
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
 abstract class SocialApiConnect
@@ -48,18 +52,11 @@ abstract class SocialApiConnect
     protected $pageUrl;
 
     /**
-     * Public accessible callback handler URL
-     *
-     * @var string
-     **/
-    protected $callbackUrl;
-
-    /**
      * OAuth authenticated session object
      *
      * @var Object
      **/
-    protected $session;
+    protected $service;
 
     /**
      * The name used to identify the Social Network
@@ -95,10 +92,11 @@ abstract class SocialApiConnect
      * @return void
      * @author Stuart Laverick
      **/
-    public function __construct()
+    public function __construct($appId, $appSecret)
     {
+        $this->appId = $appId;
+        $this->appSecret = $appSecret;
         $this->pageUrl  = admin_url('options-general.php?page=' . $_GET["page"]);
-        $this->callbackUrl  = plugins_url('callback.php', dirname(__FILE__));
     }
 
     /**
@@ -109,7 +107,7 @@ abstract class SocialApiConnect
      **/
     public function getAuthenticationUrl()
     {
-        return $this->session->getAuthorizationUri();
+        return $this->service->getAuthorizationUri();
     }
 
     /**
@@ -193,6 +191,38 @@ abstract class SocialApiConnect
     }
 
     /**
+     * Set up the API service library with account parameters
+     *
+     * @return bool
+     * @author Stuart Laverick
+     **/
+    protected function initialiseService(Array $scopes)
+    {
+        $credentials = new Credentials(
+            $this->appId,
+            $this->appSecret,
+            $this->pageUrl . '&callback=' . $this->apiName
+        );
+
+        $storage = new TransientTokenStore();
+
+        $serviceFactory = new ServiceFactory();
+
+        if ($this->service = $serviceFactory->createService(
+            $this->apiName,
+            $credentials,
+            $storage,
+            $scopes,
+            null,
+            true
+        )) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Checks for a locally stored valid access token for the service
      *
      * @return bool
@@ -200,12 +230,68 @@ abstract class SocialApiConnect
      **/
     public function hasValidAccessToken()
     {
-        if ($this->session && $this->session->getStorage()->hasAccessToken($this->apiName)) {
-            $token = $this->session->getAccessToken();
+        if ($this->service && $this->service->getStorage()->hasAccessToken($this->apiName)) {
+            $token = $this->service->getAccessToken();
             return $token->getEndOfLife() === TokenInterface::EOL_NEVER_EXPIRES
             || $token->getEndOfLife() === TokenInterface::EOL_UNKNOWN
             || time() < $token->getEndOfLife();
         }
         return false;
+    }
+
+    /**
+     * Tries to set the session property with an authenticated session
+     * using a stored OAuth token. Returns true on success false on failure.
+     *
+     * @return bool authenticated session is available
+     * @author Stuart Laverick
+     **/
+    public function hasSession()
+    {
+        $hasSession = $this->hasValidAccessToken();
+        if (!$hasSession) {
+            $hasSession = $this->createSession();
+        }
+        if (isset($_GET['disconnect']) && $_GET['disconnect'] == $this->apiName) {
+            $this->deleteSession();
+            $hasSession = false;
+        }
+        return $hasSession;
+    }
+
+    /**
+     * Attempts to get a new OAuth token from the service
+     *
+     * @return bool success
+     * @author Stuart Laverick
+     **/
+    public function createSession()
+    {
+        if ($this->service->isGlobalRequestArgumentsPassed()
+            && isset($_GET['callback'])
+            && $_GET['callback'] == $this->apiName) {
+
+            try {
+                $this->service->retrieveAccessTokenByGlobReqArgs();
+                if ($this->hasValidAccessToken()) {
+                    $this->deleteLastMessage();
+                    return true;
+                }
+            } catch (\Exception $e) {
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Removes the current OAuth token so ending the session
+     *
+     * @return void
+     * @author Stuart Laverick
+     **/
+    public function deleteSession()
+    {
+        $this->service->getStorage()->clearToken($this->apiName);
     }
 }

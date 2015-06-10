@@ -383,12 +383,12 @@ class SocialStreamsOptions
     public function printInstagramApiInfo()
     {
         if (!empty($this->options['instagram_app_id']) && !empty($this->options['instagram_app_secret'])) {
-            $igConnect = new InstagramConnect($this->options['instagram_app_id'], $this->options['instagram_app_secret']);
+            $igConnect = $this->connectionFactory->createConnection('instagram');
             if ($igConnect->hasSession()) {
                 print '<p>Connected as ' . $igConnect->getUser() . ' <a class="button button-secondary" href="' . $igConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $igConnect->getLastMessage()) {
-                    print '<p>' . $msg . '</p>';
+                    print '<p>' . $msg['message'] . '</p>';
                 }
                 print '<p><a class="button button-secondary" href="' . $igConnect->getAuthenticationUrl() . '">Connect</a></p>';
             }
