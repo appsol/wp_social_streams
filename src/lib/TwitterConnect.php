@@ -8,7 +8,7 @@
 
 namespace SocialStreams;
 
-use Abraham\TwitterOAuth\TwitterOAuth;
+use OAuth\OAuth1\Service\Twitter;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
@@ -21,66 +21,34 @@ class TwitterConnect extends SocialApiConnect implements SocialApiInterface
      * @return void
      * @author Stuart Laverick
      **/
-    public function __construct($appId, $appSecret, $accessToken, $accessTokenSecret)
+    public function __construct($appId, $appSecret)
     {
         $this->apiName = 'twitter';
-        $this->appId = $appId;
-        $this->appSecret = $appSecret;
-        $this->accessToken = $accessToken;
-        $this->accessTokenSecret = $accessTokenSecret;
-        $this->pageUrl  = 'options-general.php?page=' . $_GET["page"] . '&redirect=' . $this->apiName;
+
+        parent::__construct($appId, $appSecret);
+
+        $this->initialiseService();
     }
 
     /**
-     * Return the authentication URL
+     * Additional check for OAuth v1 token
+     * OAuth v1 token set during requestToken transaction so cannot
+     * rely on it's exisitance to indicate authentication state.
+     * On authentication a new access token will be set that is 
+     * different to the request token
      *
-     * @return string Url
+     * @return bool
      * @author Stuart Laverick
      **/
-    public function getAuthenticationUrl()
+    public function hasValidAccessToken()
     {
-        return $this->session->url('oauth/autherize', ['oauth_token' => $this->accessToken]);
-    }
+        if (parent::hasValidAccessToken()) {
+            $token = $this->service->getAccessToken();
+            $params = $token->getExtraParams();
+            return isset($params['user_id']);
+        }
 
-    /**
-     * Returns a URL that will allow the OAuth token to be deleted
-     *
-     * @return string URL
-     * @author Stuart Laverick
-     **/
-    public function getDisconnectUrl()
-    {
-        return admin_url('options-general.php?page=' . $_GET["page"] . '&disconnect=' . $this->apiName);
-    }
-
-    /**
-     * Create a valid session from the parameters passed back from Facebook
-     *
-     * @return void
-     * @author Stuart Laverick
-     **/
-    private function authenticateFromRedirect()
-    {
-        
-    }
-
-    /**
-     * Tries to set the session property with an authenticated session
-     * using a stored OAuth token. Returns true on success false on failure.
-     *
-     * @return bool authenticated session is available
-     * @author Stuart Laverick
-     **/
-    public function hasSession()
-    {
-        $this->session = new TwitterOAuth(
-            $this->appId,
-            $this->appSecret,
-            $this->accessToken,
-            $this->accessTokenSecret
-        );
-
-        return true;
+        return false;
     }
 
     /**
@@ -94,24 +62,15 @@ class TwitterConnect extends SocialApiConnect implements SocialApiInterface
     public function getUser($userId = 'me')
     {
         try {
-            $updates = $this->session->get(
-                "statuses/user_timeline",
-                [
-                    "count" => 1,
-                    "exclude_replies" => true
-                ]
-            );
-            if ($this->session->getLastHttpCode() != 200) {
-                throw new Exception($this->session->getLastBody(), $this->session->getLastHttpCode());
+            if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . 'account/verify_credentials.json')) {
+                $this->deleteLastMessage();
+                return $user['name'];
             }
-        } catch (TwitterOAuthException $e) {
-            $this->setLastMessage($e->getMessage());
+        } catch (ExpiredTokenException $e) {
+            $this->setLastMessage($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
           // Some other error occurred
-            $this->setLastMessage($e->getMessage());
-        }
-        if ($updates[0]->user) {
-            return $updates[0]->user->name;
+            $this->setLastMessage($e->getMessage(), $e->getCode());
         }
         return false;
     }

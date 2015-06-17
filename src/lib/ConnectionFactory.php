@@ -27,35 +27,18 @@ class ConnectionFactory
             throw new \Exception($class . " Service Class not available");
         }
         $connection = null;
-        switch ($service) {
+        switch (strtolower($service)) {
             case 'facebook':
             case 'instagram':
             case 'linkedin':
+            case 'google':
+            case 'twitter':
                 if (isset($options[$service . '_app_id'])
                     && isset($options[$service . '_app_secret'])) {
                     $connection = new $class(
                         $options[$service . '_app_id'],
                         $options[$service . '_app_secret']
                     );
-                }
-                break;
-            case 'twitter':
-                if (isset($options[$service . '_app_id'])
-                    && isset($options[$service . '_app_secret'])
-                    && isset($options[$service . '_access_token'])
-                    && isset($options[$service . '_access_token_secret'])
-                    ) {
-                    $connection = new $class(
-                        $options[$service . '_app_id'],
-                        $options[$service . '_app_secret'],
-                        $options[$service . '_access_token'],
-                        $options[$service . '_access_token_secret']
-                    );
-                }
-                break;
-            case 'youtube':
-                if (isset($options[$service . '_simple_key'])) {
-                    $connection = new $class($options[$service . '_simple_key']);
                 }
                 break;
             default:

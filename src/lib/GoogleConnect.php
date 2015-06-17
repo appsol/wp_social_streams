@@ -1,6 +1,6 @@
 <?php
 /**
- * SocialStreams\FacebookConnect
+ * SocialStreams\GoogleConnect
  *
  * @package wp_social_streams
  * @author Stuart Laverick
@@ -8,11 +8,11 @@
 
 namespace SocialStreams;
 
-use OAuth\OAuth2\Service\Facebook;
+use OAuth\OAuth2\Service\Google;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
-class FacebookConnect extends SocialApiConnect implements SocialApiInterface
+class GoogleConnect extends SocialApiConnect implements SocialApiInterface
 {
 
     /**
@@ -23,11 +23,11 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function __construct($appId, $appSecret)
     {
-        $this->apiName = 'facebook';
+        $this->apiName = 'google';
 
         parent::__construct($appId, $appSecret);
 
-        $this->initialiseService([Facebook::SCOPE_EMAIL]);
+        $this->initialiseService([Google::SCOPE_USERINFO_PROFILE, Google::SCOPE_YOUTUBE_READ_ONLY]);
     }
 
     /**
@@ -38,18 +38,18 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = 'me')
+    public function getUser($userId = 'YT')
     {
         try {
-            if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . $userId)) {
-                $this->deleteLastMessage();
-                return $user['name'];
-            }
+          if ($user = $this->service->requestJSON('https://www.googleapis.com/oauth2/v1/userinfo')) {
+            $this->deleteLastMessage();
+            return $user['name'];
+          }
         } catch (ExpiredTokenException $e) {
             $this->setLastMessage($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
           // Some other error occurred
-            $this->setLastMessage($e->getMessage(), $e->getCode());
+            $this->setLastMessage($e->getMessage());
         }
         return false;
     }

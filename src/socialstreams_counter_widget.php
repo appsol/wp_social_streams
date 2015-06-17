@@ -88,7 +88,7 @@ class SocialStreamsCounterWidget extends \WP_Widget
     function update($new_instance, $old_instance)
     {
         $ss = SocialStreams::getInstance();
-        $ss->deleteTransients($old_instance);
+        $ss->deleteWidgetTransients($old_instance);
 
         $instance = $old_instance;
         $instance['message'] = '';
@@ -133,5 +133,28 @@ class SocialStreamsCounterWidget extends \WP_Widget
         echo $output;
         echo $after_widget;
         return true;
+    }
+
+    /**
+     * undocumented function
+     *
+     * @return void
+     * @author 
+     **/
+    private function deleteMetricData()
+    {
+    }
+
+    /**
+     * undocumented function
+     *
+     * @return void
+     * @author 
+     **/
+    private function updateMetricdata($service)
+    {
+      $connectionFactory = new ConnectionFactory();
+      $connection = $connectionFactory->createConnection($service);
+      
     }
 }

@@ -196,7 +196,7 @@ abstract class SocialApiConnect
      * @return bool
      * @author Stuart Laverick
      **/
-    protected function initialiseService(Array $scopes)
+    protected function initialiseService(Array $scopes = [])
     {
         $credentials = new Credentials(
             $this->appId,
@@ -208,15 +208,26 @@ abstract class SocialApiConnect
 
         $serviceFactory = new ServiceFactory();
 
-        if ($this->service = $serviceFactory->createService(
-            $this->apiName,
-            $credentials,
-            $storage,
-            $scopes,
-            null,
-            true
-        )) {
-            return true;
+        $serviceFactory->setHttpTransporter('Curl', [
+                'ignoreErrors' => TRUE,
+                'maxRedirects' => 5,
+                'timeout' => 5,
+                'verifyPeer' => FALSE
+            ]);
+
+        try {
+            if ($this->service = $serviceFactory->createService(
+                $this->apiName,
+                $credentials,
+                $storage,
+                $scopes,
+                null,
+                true
+            )) {
+                return true;
+            }
+        } catch (\Exception $e) {
+            $this->setLastMessage($e->getMessage(), $e->getCode());
         }
 
         return false;
@@ -232,9 +243,7 @@ abstract class SocialApiConnect
     {
         if ($this->service && $this->service->getStorage()->hasAccessToken($this->apiName)) {
             $token = $this->service->getAccessToken();
-            return $token->getEndOfLife() === TokenInterface::EOL_NEVER_EXPIRES
-            || $token->getEndOfLife() === TokenInterface::EOL_UNKNOWN
-            || time() < $token->getEndOfLife();
+            return ! $token->isExpired();
         }
         return false;
     }
@@ -270,7 +279,6 @@ abstract class SocialApiConnect
         if ($this->service->isGlobalRequestArgumentsPassed()
             && isset($_GET['callback'])
             && $_GET['callback'] == $this->apiName) {
-
             try {
                 $this->service->retrieveAccessTokenByGlobReqArgs();
                 if ($this->hasValidAccessToken()) {
@@ -293,5 +301,25 @@ abstract class SocialApiConnect
     public function deleteSession()
     {
         $this->service->getStorage()->clearToken($this->apiName);
+    }
+
+    /**
+     * Writes to the error log
+     *
+     * @param mixed $message
+     * @param bool $backtrace
+     * @return void
+     * @author Stuart Laverick
+     */
+    public static function log($message = '', $backtrace = false) {
+        if (WP_DEBUG === true) {
+            $trace = debug_backtrace();
+            $caller = $trace[1];
+            error_log(isset($caller['class']) ? $caller['class'] . '::' . $caller['function'] : $caller['function']);
+            if ($message)
+                error_log(is_array($message) || is_object($message) ? print_r($message, true) : $message);
+            if ($backtrace)
+                error_log(print_r($backtrace, true));
+        }
     }
 }

@@ -170,38 +170,29 @@ class SocialStreamsOptions
             ['name' => 'twitter_app_secret']
         );
 
-        add_settings_field(
-            'socialstreams_twitter_access_token', // ID
-            'Twitter Access Token', // Title
-            [$this, 'simpleKeyCallback'], // Callback
-            'socialstreams-setting-admin', // Page
-            'socialstreams_twitter', // Section
-            ['name' => 'twitter_access_token']
-        );
-
-        add_settings_field(
-            'socialstreams_twitter_access_token_secret', // ID
-            'Twitter Access Token Secret', // Title
-            [$this, 'hiddenKeyCallback'], // Callback
-            'socialstreams-setting-admin', // Page
-            'socialstreams_twitter', // Section
-            ['name' => 'twitter_access_token_secret']
-        );
-
         add_settings_section(
-            'socialstreams_youtube', // ID
-            'YouTube Options', // Title
-            [$this, 'printYouTubeApiInfo'], // Callback
+            'socialstreams_google', // ID
+            'Google Options', // Title
+            [$this, 'printGoogleApiInfo'], // Callback
             'socialstreams-setting-admin' // Page
         );
 
         add_settings_field(
-            'socialstreams_youtube_simple_key', // ID
-            'YouTube Simple API Key', // Title
+            'socialstreams_google_app_id', // ID
+            'Google Client ID', // Title
             [$this, 'simpleKeyCallback'], // Callback
             'socialstreams-setting-admin', // Page
-            'socialstreams_youtube', // Section
-            ['name' => 'youtube_simple_key']
+            'socialstreams_google', // Section
+            ['name' => 'google_app_id']
+        );
+
+        add_settings_field(
+            'socialstreams_google_app_secret', // ID
+            'Google Client Secret', // Title
+            [$this, 'hiddenKeyCallback'], // Callback
+            'socialstreams-setting-admin', // Page
+            'socialstreams_google', // Section
+            ['name' => 'google_app_secret']
         );
 
         add_settings_section(
@@ -307,12 +298,12 @@ class SocialStreamsOptions
     public function printFacebookApiInfo()
     {
         if (!empty($this->options['facebook_app_id']) && !empty($this->options['facebook_app_secret'])) {
-            $fbConnect = new FacebookConnect($this->options['facebook_app_id'], $this->options['facebook_app_secret']);
+            $fbConnect = $this->connectionFactory->createConnection('facebook');
             if ($fbConnect->hasSession()) {
-                print '<p>Connected as ' . $fbConnect->getUser() . '</p>';
+                print '<p>Connected as ' . $fbConnect->getUser() . ' <a class="button button-secondary" href="' . $fbConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $fbConnect->getLastMessage()) {
-                    print '<p>' . $msg . '</p>';
+                    print '<p>' . $msg['message'] . '</p>';
                 }
                 print '<p><a class="button button-secondary" href="' . $fbConnect->getAuthenticationUrl() . '">Connect</a></p>';
             }
@@ -327,19 +318,20 @@ class SocialStreamsOptions
      * @return void
      * @author Stuart Laverick
      **/
-    public function printYouTubeApiInfo()
+    public function printGoogleApiInfo()
     {
-        if (!empty($this->options['youtube_simple_key'])) {
-            $ytConnect = new YoutubeConnect($this->options['youtube_simple_key']);
-            if ($ytConnect->hasSession()) {
-                print '<p>Connected</p>';
+        if (!empty($this->options['google_app_id']) && !empty($this->options['google_app_secret'])) {
+            $ggConnect = $this->connectionFactory->createConnection('google');
+            if ($ggConnect->hasSession()) {
+                print '<p>Connected as ' . $ggConnect->getUser() . ' <a class="button button-secondary" href="' . $ggConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
-                if ($msg = $ytConnect->getLastMessage()) {
-                    print '<p>' . $msg . '</p>';
+                if ($msg = $ggConnect->getLastMessage()) {
+                    print '<p>' . $msg['message'] . '</p>';
                 }
+                print '<p><a class="button button-secondary" href="' . $ggConnect->getAuthenticationUrl() . '">Connect</a></p>';
             }
         } else {
-            print '<p>Enter your Simple API key. See <a target="_blank" href="https://console.developers.google.com/project?authuser=0">Google Developers Console</a></p>';
+            print '<p>Enter your Google API keys. These can be used for many Google services (e.g. YouTube, etc) See <a target="_blank" href="https://console.developers.google.com/project?authuser=0">Google Developers Console</a></p>';
         }
     }
 
@@ -351,21 +343,13 @@ class SocialStreamsOptions
      **/
     public function printTwitterApiInfo()
     {
-        if (!empty($this->options['twitter_app_id']) 
-            && !empty($this->options['twitter_app_secret'])
-            && !empty($this->options['twitter_access_token'])
-            && !empty($this->options['twitter_access_token_secret'])) {
-            $twConnect = new TwitterConnect(
-                $this->options['twitter_app_id'],
-                $this->options['twitter_app_secret'],
-                $this->options['twitter_access_token'],
-                $this->options['twitter_access_token_secret']
-            );
+        if (!empty($this->options['twitter_app_id']) && !empty($this->options['twitter_app_secret'])) {
+            $twConnect = $this->connectionFactory->createConnection('twitter');
             if ($twConnect->hasSession()) {
-                print '<p>Connected as ' . $twConnect->getUser() . '</p>';
+                print '<p>Connected as ' . $twConnect->getUser() . ' <a class="button button-secondary" href="' . $twConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $twConnect->getLastMessage()) {
-                    print '<p>' . $msg . '</p>';
+                    print '<p>' . $msg['message'] . '</p>';
                 }
                 print '<p><a class="button button-secondary" href="' . $twConnect->getAuthenticationUrl() . '">Connect</a></p>';
             }
@@ -408,7 +392,6 @@ class SocialStreamsOptions
         if (!empty($this->options['linkedin_app_id']) && !empty($this->options['linkedin_app_secret'])) {
 
                 $liConnect = $this->connectionFactory->createConnection('linkedin');
-
                 if ($liConnect->hasSession()) {
                     print '<p>Connected as ' . $liConnect->getUser() . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
                 } else {
@@ -417,7 +400,6 @@ class SocialStreamsOptions
                     }
                     print '<p><a class="button button-secondary" href="' . $liConnect->getAuthenticationUrl() . '">Connect</a></p>';
                 }
-            // $liConnect = new LinkedinConnect($this->options['linkedin_app_id'], $this->options['linkedin_app_secret']);
         } else {
             print '<p>Enter your LinkedIn API keys. See <a target="_blank" href="https://www.linkedin.com/developer/apps">LinkedIn My Applications</a></p>';
         }
