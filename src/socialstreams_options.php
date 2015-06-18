@@ -299,8 +299,8 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['facebook_app_id']) && !empty($this->options['facebook_app_secret'])) {
             $fbConnect = $this->connectionFactory->createConnection('facebook');
-            if ($fbConnect->hasSession()) {
-                print '<p>Connected as ' . $fbConnect->getUser() . ' <a class="button button-secondary" href="' . $fbConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+            if ($fbConnect->hasSession() && $user = $fbConnect->getUser()) {
+                print '<p>Connected as ' . $user['name'] . ' <a class="button button-secondary" href="' . $fbConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $fbConnect->getLastMessage()) {
                     print '<p>' . $msg['message'] . '</p>';
@@ -322,8 +322,8 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['google_app_id']) && !empty($this->options['google_app_secret'])) {
             $ggConnect = $this->connectionFactory->createConnection('google');
-            if ($ggConnect->hasSession()) {
-                print '<p>Connected as ' . $ggConnect->getUser() . ' <a class="button button-secondary" href="' . $ggConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+            if ($ggConnect->hasSession() && $user = $ggConnect->getUser()) {
+                print '<p>Connected as ' . $user['name'] . ' <a class="button button-secondary" href="' . $ggConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $ggConnect->getLastMessage()) {
                     print '<p>' . $msg['message'] . '</p>';
@@ -345,8 +345,8 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['twitter_app_id']) && !empty($this->options['twitter_app_secret'])) {
             $twConnect = $this->connectionFactory->createConnection('twitter');
-            if ($twConnect->hasSession()) {
-                print '<p>Connected as ' . $twConnect->getUser() . ' <a class="button button-secondary" href="' . $twConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+            if ($twConnect->hasSession() && $user = $twConnect->getUser()) {
+                print '<p>Connected as ' . $user['name'] . ' <a class="button button-secondary" href="' . $twConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $twConnect->getLastMessage()) {
                     print '<p>' . $msg['message'] . '</p>';
@@ -368,8 +368,8 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['instagram_app_id']) && !empty($this->options['instagram_app_secret'])) {
             $igConnect = $this->connectionFactory->createConnection('instagram');
-            if ($igConnect->hasSession()) {
-                print '<p>Connected as ' . $igConnect->getUser() . ' <a class="button button-secondary" href="' . $igConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+            if ($igConnect->hasSession() && $user = $igConnect->getUser()) {
+                print '<p>Connected as ' . $user['full_name'] . ' <a class="button button-secondary" href="' . $igConnect->getDisconnectUrl() . '">Disconnect</a></p>';
             } else {
                 if ($msg = $igConnect->getLastMessage()) {
                     print '<p>' . $msg['message'] . '</p>';
@@ -392,8 +392,8 @@ class SocialStreamsOptions
         if (!empty($this->options['linkedin_app_id']) && !empty($this->options['linkedin_app_secret'])) {
 
                 $liConnect = $this->connectionFactory->createConnection('linkedin');
-                if ($liConnect->hasSession()) {
-                    print '<p>Connected as ' . $liConnect->getUser() . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
+                if ($liConnect->hasSession() && $user = $liConnect->getUser()) {
+                    print '<p>Connected as ' . $user['firstName'] . ' ' . $user['lastName'] . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
                 } else {
                     if ($msg = $liConnect->getLastMessage()) {
                         print '<p>' . $msg['message'] . '</p>';

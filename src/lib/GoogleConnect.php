@@ -31,6 +31,24 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getNiceName()
+    {
+        return 'YouTube';
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerName($plural = false)
+    {
+        return $plural? 'followers' : 'follower';
+    }
+
+    /**
      * Get a user object
      * Returns the authenticated user if no user ID supplied
      *
@@ -38,12 +56,12 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = 'YT')
+    public function getUser($userId = '')
     {
         try {
           if ($user = $this->service->requestJSON('https://www.googleapis.com/oauth2/v1/userinfo')) {
             $this->deleteLastMessage();
-            return $user['name'];
+            return $user;
           }
         } catch (ExpiredTokenException $e) {
             $this->setLastMessage($e->getMessage(), $e->getCode());
@@ -52,5 +70,22 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
             $this->setLastMessage($e->getMessage());
         }
         return false;
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerCount($userId = '', $purgeCache = false)
+    {
+        $count = $this->getTemporaryData('follower_count_' . $userId);
+        if (!$count || $purgeCache) {
+            if ($user = $this->getUser($userId)) {
+                $this->log($user);
+                // $count = $user['followers_count'];
+                // $this->storeTemporaryData('follower_count' . $userId, $count);
+            }
+        }
+        return $count;
     }
 }

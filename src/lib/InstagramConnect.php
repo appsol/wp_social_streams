@@ -31,6 +31,24 @@ class InstagramConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getNiceName()
+    {
+        return 'Instagram';
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerName($plural = false)
+    {
+        return $plural? 'followers' : 'follower';
+    }
+
+    /**
      * Get a user object
      * Returns the authenticated user if no user ID supplied
      *
@@ -38,12 +56,13 @@ class InstagramConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = 'self')
+    public function getUser($userId = '')
     {
+        $userId = $userId? : 'self';
         try {
             if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . 'users/' . $userId)) {
                 $this->deleteLastMessage();
-                return $user['data']['full_name'];
+                return $user['data'];
             }
         } catch (ExpiredTokenException $e) {
             $this->setLastMessage($e->getMessage(), $e->getCode());
@@ -53,5 +72,22 @@ class InstagramConnect extends SocialApiConnect implements SocialApiInterface
         }
 
         return false;
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerCount($userId = '', $purgeCache = false)
+    {
+        $count = $this->getTemporaryData('follower_count_' . $userId);
+        if (!$count || $purgeCache) {
+            if ($user = $this->getUser($userId)) {
+                $this->log($user);
+                $count = $user['counts']['followed_by'];
+                $this->storeTemporaryData('follower_count_' . $userId, $count);
+            }
+        }
+        return $count;
     }
 }

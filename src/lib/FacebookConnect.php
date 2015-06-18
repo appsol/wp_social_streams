@@ -31,6 +31,24 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getNiceName()
+    {
+        return 'Facebook';
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerName($plural = false)
+    {
+        return $plural? 'followers' : 'follower';
+    }
+
+    /**
      * Get a user object
      * Returns the authenticated user if no user ID supplied
      *
@@ -38,19 +56,49 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = 'me')
+    public function getUser($userId = '', $purgeCache = false)
     {
-        try {
-            if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . $userId)) {
-                $this->deleteLastMessage();
-                return $user['name'];
+        $requestUrl = $userId? : 'me';
+        $user = $this->getTemporaryData($requestUrl);
+        if (!$user || $purgeCache) {
+            try {
+                if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
+                    $this->deleteLastMessage();
+                    $this->storeTemporaryData($requestUrl, $url);
+                }
+            } catch (ExpiredTokenException $e) {
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            } catch (\Exception $e) {
+              // Some other error occurred
+                $this->setLastMessage($e->getMessage(), $e->getCode());
             }
-        } catch (ExpiredTokenException $e) {
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-          // Some other error occurred
-            $this->setLastMessage($e->getMessage(), $e->getCode());
         }
-        return false;
+        return $user;
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerCount($userId = '', $purgeCache = false)
+    {
+        $userId = $userId? : 'me';
+        $requestUrl = $userId . '/friends';
+        $count = $this->getTemporaryData($requestUrl);
+        if (!$count || $purgeCache) {
+            try {
+                if ($result = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
+                    $this->deleteLastMessage();
+                    $count = $result['summary']['total_count'];
+                    $this->storeTemporaryData($requestUrl, $count);
+                }
+            } catch (ExpiredTokenException $e) {
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            } catch (\Exception $e) {
+              // Some other error occurred
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            }
+        }
+        return $count;
     }
 }

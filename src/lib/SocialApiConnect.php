@@ -77,7 +77,7 @@ abstract class SocialApiConnect
      *
      * @var integer
      **/
-    protected $transientLifetime = 2419200;
+    protected $transientLifetime = WEEK_IN_SECONDS;
 
     /**
      * Last error to be returned from the API
@@ -97,6 +97,15 @@ abstract class SocialApiConnect
         $this->appId = $appId;
         $this->appSecret = $appSecret;
         $this->pageUrl  = admin_url('options-general.php?page=' . $_GET["page"]);
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getNetworkName()
+    {
+        return $this->apiName;
     }
 
     /**

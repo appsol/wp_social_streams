@@ -11,6 +11,29 @@ defined('ABSPATH') or die( 'No script kiddies please!' );
 
 interface SocialApiInterface
 {
+    /**
+     * Returns the url safe name for the network
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getNetworkName();
+
+    /**
+     * Returns the human readable name for the network
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getNiceName();
+
+    /**
+     * Returns the name given to followers in the network
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getFollowerName($plural);
 
     /**
      * Return the authentication URL
@@ -64,9 +87,26 @@ interface SocialApiInterface
      * Get a user object
      * Returns the authenticated user if no user ID supplied
      *
-     * @param string userId
+     * @param string $userId
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser();
+    public function getUser($userId);
+
+    /**
+     * Returns the number of connected nodes within the graph that
+     * show social influence, e.g.
+     * Facebook: friends
+     * Facebook Page: likes
+     * Twitter: followers
+     * YouTube: subscribers
+     * LinkedIn: connections
+     * Instagram: followers
+     *
+     * @param string $userId
+     * @param Bool $purgeCache
+     * @return int
+     * @author Stuart Laverick
+     **/
+    public function getFollowerCount($userId, $purgeCache);
 }

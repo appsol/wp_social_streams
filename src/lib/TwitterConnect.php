@@ -31,6 +31,24 @@ class TwitterConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getNiceName()
+    {
+        return 'Twitter';
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerName($plural = false)
+    {
+        return $plural? 'followers' : 'follower';
+    }
+
+    /**
      * Additional check for OAuth v1 token
      * OAuth v1 token set during requestToken transaction so cannot
      * rely on it's exisitance to indicate authentication state.
@@ -59,19 +77,38 @@ class TwitterConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = 'me')
+    public function getUser($userId = '', $purgeCache = false)
     {
-        try {
-            if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . 'account/verify_credentials.json')) {
-                $this->deleteLastMessage();
-                return $user['name'];
+        $userId = $userId? : 'me';
+        $requestUrl = $userId == 'me'? 'account/verify_credentials.json' : 'users/show.json?user_id=' . $userId;
+        $user = $this->getTemporaryData($requestUrl);
+        if (!$user || $purgeCache) {
+            try {
+                if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
+                    $this->deleteLastMessage();
+                    $this->storeTemporaryData($requestUrl, $user);
+                }
+            } catch (ExpiredTokenException $e) {
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            } catch (\Exception $e) {
+              // Some other error occurred
+                $this->setLastMessage($e->getMessage(), $e->getCode());
             }
-        } catch (ExpiredTokenException $e) {
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-          // Some other error occurred
-            $this->setLastMessage($e->getMessage(), $e->getCode());
         }
-        return false;
+
+        return $user;
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerCount($userId = '', $purgeCache = false)
+    {
+        $count = false;
+        if ($user = $this->getUser($userId, $purgeCache)) {
+            $count = $user['followers_count'];
+        }
+        return $count;
     }
 }

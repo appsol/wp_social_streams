@@ -36,6 +36,10 @@ require_once 'socialstreams_options.php';
 
 class SocialStreams
 {
+    /**
+     * Available Social Networks
+     **/
+    const NETWORKS = 'facebook,twitter,google,instagram,linkedin';
 
     /**
      * Singleton class instance
@@ -52,6 +56,13 @@ class SocialStreams
     public $lastError;
 
     /**
+     * Social Networks which have saved connection parameters
+     *
+     * @var Array
+     **/
+    public $activeNetworks = [];
+
+    /**
      * Constructor for SocialStreams
      *
      * @return void
@@ -66,6 +77,18 @@ class SocialStreams
             $optionsPage = new SocialStreamsOptions();
         } else {
             add_action('wp_enqueue_scripts', [$this, 'actionEnqueueAssets']);
+        }
+        // Create the connection objects for the active networks
+        $options = get_option('socialstreams');
+        $networks = explode(',', SocialStreams::NETWORKS);
+        $connectionFactory = new ConnectionFactory();
+        foreach ($networks as $network) {
+            if (!empty($options[$network . '_app_id']) && !empty($options[$network . '_app_secret'])) {
+                $connection = $connectionFactory->createConnection($network);
+                if ($connection->hasSession()) {
+                    $this->activeNetworks[$network] = $connection;
+                }
+            }
         }
     }
 

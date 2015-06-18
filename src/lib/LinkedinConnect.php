@@ -31,6 +31,24 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getNiceName()
+    {
+        return 'LinkedIn';
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerName($plural = false)
+    {
+        return $plural? 'connections' : 'connection';
+    }
+
+    /**
      * Get a user object
      * Returns the authenticated user if no user ID supplied
      *
@@ -38,12 +56,13 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = '~')
+    public function getUser($userId = '')
     {
+        $userId = $userId? : '~';
         try {
             if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . 'people/' . $userId . '?format=json')) {
                 $this->deleteLastMessage();
-                return $user['firstName'] . ' ' . $user['lastName'];
+                return $user;
             }
         } catch (ExpiredTokenException $e) {
             $this->setLastMessage($e->getMessage(), $e->getCode());
@@ -52,5 +71,33 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
             $this->setLastMessage($e->getMessage(), $e->getCode());
         }
         return false;
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getFollowerCount($userId = '', $purgeCache = false)
+    {
+        $userId = $userId? : '~';
+        $requestUrl =  'people/' . $userId . ':(id,num-connections,num-connections-capped)?format=json';
+        $count = $this->getTemporaryData($requestUrl);
+        if (!$count || $purgeCache) {
+            try {
+                $this->log($requestUrl);
+                if ($result = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
+                    $this->log($result);
+                    $this->deleteLastMessage();
+                    $count = $result['num-connections'];
+                    $this->storeTemporaryData($requestUrl, $count);
+                }
+            } catch (ExpiredTokenException $e) {
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            } catch (\Exception $e) {
+              // Some other error occurred
+                $this->setLastMessage($e->getMessage(), $e->getCode());
+            }
+        }
+        return $count;
     }
 }
