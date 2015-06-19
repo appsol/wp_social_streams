@@ -56,21 +56,13 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = '')
+    public function getUser($userId = '', $purgeCache = false)
     {
         $userId = $userId? : '~';
-        try {
-            if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . 'people/' . $userId . '?format=json')) {
-                $this->deleteLastMessage();
-                return $user;
-            }
-        } catch (ExpiredTokenException $e) {
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-          // Some other error occurred
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        }
-        return false;
+        $requestUrl = 'people/' . $userId . '?format=json';
+        $user = $this->getData($requestUrl, $purgeCache);
+
+        return $user;
     }
 
     /**
@@ -81,23 +73,25 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
     {
         $userId = $userId? : '~';
         $requestUrl =  'people/' . $userId . ':(id,num-connections,num-connections-capped)?format=json';
-        $count = $this->getTemporaryData($requestUrl);
-        if (!$count || $purgeCache) {
-            try {
-                $this->log($requestUrl);
-                if ($result = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
-                    $this->log($result);
-                    $this->deleteLastMessage();
-                    $count = $result['num-connections'];
-                    $this->storeTemporaryData($requestUrl, $count);
-                }
-            } catch (ExpiredTokenException $e) {
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            } catch (\Exception $e) {
-              // Some other error occurred
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            }
+        $count = false;
+        if ($result = $this->getData($requestUrl, $purgeCache)) {
+            $count = $result['num-connections'];
         }
+
         return $count;
+    }
+
+    /**
+     * Get the public link to the entity on LinkedIn
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getProfileUrl($userId = '', $purgeCache = false)
+    {
+        if ($user = $this->getUser($userId, $purgeCache)) {
+            return ;
+        }
+
     }
 }

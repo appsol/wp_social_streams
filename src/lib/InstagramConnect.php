@@ -56,22 +56,26 @@ class InstagramConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = '')
+    public function getUser($userId = '', $purgeCache = false)
     {
-        $userId = $userId? : 'self';
-        try {
-            if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . 'users/' . $userId)) {
-                $this->deleteLastMessage();
-                return $user['data'];
+        // If not the authenticated user then search for them by username
+        $requestUrl = $userId? 'users/search?q=' . $userId . '&count=5' : 'users/self';
+        $user = false;
+        if ($result = $this->getData($requestUrl, $purgeCache)) {
+            $user = $result['data'];
+            // If not the authenticated user then a second request is required to get the default profile
+            if ($userId) {
+                foreach ($result['data'] as $u) {
+                    if ($u['username'] == $userId) {
+                        if ($result = $this->getData('users/' . $u['id'], $purgeCache)) {
+                            $user = $result['data'];
+                        }
+                        break;
+                    }
+                }
             }
-        } catch (ExpiredTokenException $e) {
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-          // Some other error occurred
-            $this->setLastMessage($e->getMessage(), $e->getCode());
         }
-
-        return false;
+        return $user;
     }
 
     /**
@@ -80,14 +84,24 @@ class InstagramConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function getFollowerCount($userId = '', $purgeCache = false)
     {
-        $count = $this->getTemporaryData('follower_count_' . $userId);
-        if (!$count || $purgeCache) {
-            if ($user = $this->getUser($userId)) {
-                $this->log($user);
-                $count = $user['counts']['followed_by'];
-                $this->storeTemporaryData('follower_count_' . $userId, $count);
-            }
+        $count = false;
+        if ($user = $this->getUser($userId, $purgeCache)) {
+            $count = $user['counts']['followed_by'];
         }
         return $count;
+    }
+
+    /**
+     * Get the public link to the entity on Instagram
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getProfileUrl($userId = '', $purgeCache = false)
+    {
+        if ($user = $this->getUser($userId, $purgeCache)) {
+            return 'https://www.instagram.com/' . $user['username'];
+        }
+
     }
 }

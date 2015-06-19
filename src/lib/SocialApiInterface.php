@@ -36,6 +36,15 @@ interface SocialApiInterface
     public function getFollowerName($plural);
 
     /**
+     * Gets the data relevant to the Restful query either from a local cache
+     * or from the API if no local cache exists
+     *
+     * @return mixed
+     * @author Stuart Laverick
+     **/
+    public function getData($requestUrl, $purgeCache);
+
+    /**
      * Return the authentication URL
      *
      * @return string Url
@@ -109,4 +118,12 @@ interface SocialApiInterface
      * @author Stuart Laverick
      **/
     public function getFollowerCount($userId, $purgeCache);
+
+    /**
+     * Get the public link to the entity on the social network
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getProfileUrl($userId, $purgeCache);
 }

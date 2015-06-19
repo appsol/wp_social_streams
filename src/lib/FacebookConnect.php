@@ -59,20 +59,8 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
     public function getUser($userId = '', $purgeCache = false)
     {
         $requestUrl = $userId? : 'me';
-        $user = $this->getTemporaryData($requestUrl);
-        if (!$user || $purgeCache) {
-            try {
-                if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
-                    $this->deleteLastMessage();
-                    $this->storeTemporaryData($requestUrl, $url);
-                }
-            } catch (ExpiredTokenException $e) {
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            } catch (\Exception $e) {
-              // Some other error occurred
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            }
-        }
+        $user = $this->getData($requestUrl, $purgeCache);
+
         return $user;
     }
 
@@ -82,23 +70,31 @@ class FacebookConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function getFollowerCount($userId = '', $purgeCache = false)
     {
-        $userId = $userId? : 'me';
-        $requestUrl = $userId . '/friends';
-        $count = $this->getTemporaryData($requestUrl);
-        if (!$count || $purgeCache) {
-            try {
-                if ($result = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
-                    $this->deleteLastMessage();
-                    $count = $result['summary']['total_count'];
-                    $this->storeTemporaryData($requestUrl, $count);
-                }
-            } catch (ExpiredTokenException $e) {
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            } catch (\Exception $e) {
-              // Some other error occurred
-                $this->setLastMessage($e->getMessage(), $e->getCode());
+        $user = $this->getUser($userId);
+        $count = false;
+        // Is this a page or a user?
+        if (isset($user['likes'])) {
+            $count = $user['likes'];
+        } else {
+            $userId = $userId? : 'me';
+            $requestUrl = $userId . '/friends';
+            if ($result = $this->getData($requestUrl, $purgeCache)) {
+                $count = $result['summary']['total_count'];
             }
         }
+
         return $count;
+    }
+
+    /**
+     * Get the public link to the entity on facebook
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getProfileUrl($userId = '', $purgeCache = false)
+    {
+        $user = $this->getUser($userId);
+        return $user['link'];
     }
 }

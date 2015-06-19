@@ -59,7 +59,7 @@ class SocialStreamsCounterWidget extends \WP_Widget
             $entityFieldId = $network->getNetworkName() . '_entity_id';
             $countFieldName = 'Show ' . $network->getNiceName() . ' Count';
             $entityFieldName = $network->getNiceName() . ' Entity ID';
-            $count = $network->getFollowerCount(); ?>
+            $count = $network->getFollowerCount($instance[$entityFieldId]); ?>
     <p>
       <input class="checkbox" id="<?php echo $this->get_field_id($countFieldId); ?>" name="<?php echo $this->get_field_name($countFieldId); ?>" type="checkbox" value="yes" <?php if (esc_attr($instance[$countFieldId]) == 'yes') echo 'checked="checked"'; ?> />
       <label for="<?php echo $this->get_field_id($countFieldId); ?>"><?php _e($countFieldName); ?><?php if($count) echo ' (' . $count . ')'; ?></label>
@@ -98,10 +98,6 @@ class SocialStreamsCounterWidget extends \WP_Widget
         $instance[$network->getNetworkName() . '_count'] = isset($new_instance[$network->getNetworkName() . '_count'])? 'yes' : 'no';
         $instance[$network->getNetworkName() . '_entity_id'] = $new_instance[$network->getNetworkName() . '_entity_id'];
       }
-      // $instance['twitter_count'] = isset($new_instance['twitter_count'])? 'yes' : 'no';
-      // $instance['youtube_count'] = isset($new_instance['youtube_count'])? 'yes' : 'no';
-      // $instance['instagram_count'] = isset($new_instance['instagram_count'])? 'yes' : 'no';
-      // $instance['linkedin_count'] = isset($new_instance['linkedin_count'])? 'yes' : 'no';
 
       return $instance;
     }
@@ -119,25 +115,31 @@ class SocialStreamsCounterWidget extends \WP_Widget
       if ($instance['home_only'] == 'yes' && !is_front_page()) {
         return;
       }
-      $title = apply_filters('widget_title', $instance['title']);
       $ss = SocialStreams::getInstance();
+      $totalCount = 0;
 
-      $output = ['<dl>'];
+      $title = apply_filters('widget_title', $instance['title']);
+      $body = ['<dl>'];
       foreach ($ss->activeNetworks as $network) {
         if ($instance[$network->getNetworkName() . '_count'] === 'yes') {
-          $output[] = '<dt class="network-name ' . $network->getNetworkName() . '">'
-                . $network->getNiceName() . '</dt>';
-          $output[] = '<dd>' . $network->getFollowerCount($instance[$network->getNetworkName() . '_entity_id']) . '<span class="follower-name">'
-                . $network->getFollowerName(true) . '</span></dd>';
+          $count = $network->getFollowerCount($instance[$network->getNetworkName() . '_entity_id']);
+          $url = $network->getProfileUrl($instance[$network->getNetworkName() . '_entity_id']);
+          $totalCount+= $count;
+          $body[] = '<dt class="network-name ' . $network->getNetworkName() . '"><a href="' . $url . '">'
+                . $network->getNiceName() . '</a></dt>';
+          $body[] = '<dd>' . $count . ' <span class="follower-name">' . $network->getFollowerName(true) . '</span></dd>';
         }
       }
-      $output[] = '</dl>';
-      echo $before_widget;
+      $body[] = '</dl>';
+      $html = [$before_widget];
       if ($title) {
-        echo $before_title . $title . $after_title;
+        $html[] = $before_title . $title . $after_title;
       }
-      echo $output;
-      echo $after_widget;
+      $html[] = '<p>' . _('Total Followers: ') . $totalCount . '</p>';
+      $html[] = implode("\n", $body);
+      $html[] = $after_widget;
+
+      echo implode("\n", $html);
       return true;
     }
 

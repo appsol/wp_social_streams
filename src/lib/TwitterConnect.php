@@ -80,22 +80,8 @@ class TwitterConnect extends SocialApiConnect implements SocialApiInterface
     public function getUser($userId = '', $purgeCache = false)
     {
         $userId = $userId? : 'me';
-        $requestUrl = $userId == 'me'? 'account/verify_credentials.json' : 'users/show.json?user_id=' . $userId;
-        $user = $this->getTemporaryData($requestUrl);
-        if (!$user || $purgeCache) {
-            try {
-                if ($user = $this->service->requestJSON($this->service->getBaseApiUri() . $requestUrl)) {
-                    $this->deleteLastMessage();
-                    $this->storeTemporaryData($requestUrl, $user);
-                }
-            } catch (ExpiredTokenException $e) {
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            } catch (\Exception $e) {
-              // Some other error occurred
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            }
-        }
-
+        $requestUrl = $userId == 'me'? 'account/verify_credentials.json' : 'users/show.json?screen_name=' . $userId;
+        $user = $this->getData($requestUrl, $purgeCache);
         return $user;
     }
 
@@ -110,5 +96,19 @@ class TwitterConnect extends SocialApiConnect implements SocialApiInterface
             $count = $user['followers_count'];
         }
         return $count;
+    }
+
+    /**
+     * Get the public link to the entity on Twitter
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getProfileUrl($userId = '', $purgeCache = false)
+    {
+        if ($user = $this->getUser($userId, $purgeCache)) {
+            return 'https://www.twitter.com/' . $user['screen_name'];
+        }
+
     }
 }

@@ -143,6 +143,25 @@ abstract class SocialApiConnect
     }
 
     /**
+     * Gets the data relevant to the Restful query either from a local cache
+     * or from the API if no local cache exists
+     *
+     * @return mixed
+     * @author Stuart Laverick
+     **/
+    public function getData($requestUrl, $purgeCache = false)
+    {
+        $this->log($requestUrl);
+        $result = $this->getTemporaryData($requestUrl);
+        if (!$result || $purgeCache) {
+            if($result = $this->queryApi($requestUrl)) {
+                $this->storeTemporaryData($requestUrl, $result);
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Retrieves stored temporary data
      *
      * @return string OAuth token
@@ -291,6 +310,7 @@ abstract class SocialApiConnect
             try {
                 $this->service->retrieveAccessTokenByGlobReqArgs();
                 if ($this->hasValidAccessToken()) {
+                    $this->getUser('', true);
                     $this->deleteLastMessage();
                     return true;
                 }
@@ -310,6 +330,40 @@ abstract class SocialApiConnect
     public function deleteSession()
     {
         $this->service->getStorage()->clearToken($this->apiName);
+    }
+
+    /**
+     * Quieries the Restful API endpoint and returns the result
+     *
+     * @return mixed
+     * @author Stuart Laverick
+     **/
+    protected function queryApi($requestUrl)
+    {
+        try {
+            $url = $this->service->getBaseApiUri() . $requestUrl;
+        } catch (\Exception $e) {
+            $url = $requestUrl;
+        }
+        try {
+            if ($result = $this->service->request($url)) {
+                $this->log($result);
+                if ($result = json_decode($result, true)) {
+                    $this->deleteLastMessage();
+                    return $result;
+                }
+                $this->log(json_last_error_msg());
+                $this->setLastMessage(json_last_error_msg());
+            }
+        } catch (ExpiredTokenException $e) {
+            $this->log($e->getMessage());
+            $this->setLastMessage($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+          // Some other error occurred
+            $this->log($e->getMessage());
+            $this->setLastMessage($e->getMessage(), $e->getCode());
+        }
+        return false;
     }
 
     /**

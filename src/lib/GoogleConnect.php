@@ -21,13 +21,17 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
      * @return void
      * @author Stuart Laverick
      **/
-    public function __construct($appId, $appSecret)
+    public function __construct($appId, $appSecret, $additionalScopes = [])
     {
         $this->apiName = 'google';
+        $scope = [
+            Google::SCOPE_USERINFO_PROFILE,
+            Google::SCOPE_YOUTUBE_READ_ONLY
+            ];
 
         parent::__construct($appId, $appSecret);
 
-        $this->initialiseService([Google::SCOPE_USERINFO_PROFILE, Google::SCOPE_YOUTUBE_READ_ONLY]);
+        $this->initialiseService($scope);
     }
 
     /**
@@ -56,20 +60,14 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
      * @return User
      * @author Stuart Laverick
      **/
-    public function getUser($userId = '')
+    public function getUser($userId = '', $purgeCache = false)
     {
-        try {
-          if ($user = $this->service->requestJSON('https://www.googleapis.com/oauth2/v1/userinfo')) {
-            $this->deleteLastMessage();
-            return $user;
-          }
-        } catch (ExpiredTokenException $e) {
-            $this->setLastMessage($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-          // Some other error occurred
-            $this->setLastMessage($e->getMessage());
-        }
-        return false;
+        $requestUrl = $userId?
+            'https://www.googleapis.com/youtube/v3/channels?part=id,snippet,statistics&forUsername=' . $userId
+            : 'https://www.googleapis.com/oauth2/v1/userinfo';
+        $user = $this->getData($requestUrl, $purgeCache);
+        $this->log($user);
+        return $user;
     }
 
     /**
@@ -78,14 +76,37 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function getFollowerCount($userId = '', $purgeCache = false)
     {
-        $count = $this->getTemporaryData('follower_count_' . $userId);
-        if (!$count || $purgeCache) {
-            if ($user = $this->getUser($userId)) {
-                $this->log($user);
-                // $count = $user['followers_count'];
-                // $this->storeTemporaryData('follower_count' . $userId, $count);
+        $count = false;
+        if ($userId) {
+            if ($channels = $this->getUser($userId, $purgeCache)) {
+                if($channel = array_pop($channels['items'])) {
+                    $count = $channel['statistics']['subscriberCount'];
+                }
+
+            }
+
+        } else {
+            $requestUrl = 'https://www.googleapis.com/youtube/v3/subscriptions?part=id&mySubscribers=true';
+
+            if ($result = $this->getData($requestUrl, $purgeCache)) {
+                $count = $result['pageInfo']['totalResults'];
             }
         }
+
         return $count;
+    }
+
+    /**
+     * Get the public link to the entity on YouTube
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getProfileUrl($userId = '', $purgeCache = false)
+    {
+        if ($userId) {
+            return 'https://www.youtube.com/user/' . $userId;
+        }
+
     }
 }
