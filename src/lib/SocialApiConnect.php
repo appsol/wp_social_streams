@@ -270,8 +270,14 @@ abstract class SocialApiConnect
     public function hasValidAccessToken()
     {
         if ($this->service && $this->service->getStorage()->hasAccessToken($this->apiName)) {
-            $token = $this->service->getAccessToken();
-            return ! $token->isExpired();
+            try {
+                    $token = $this->service->getAccessToken();
+                    return ! $token->isExpired();
+            }
+            catch (TokenNotFoundException $e) {
+                $this->setLastMessage($e->getMessage());
+                return false;
+            }
         }
         return false;
     }

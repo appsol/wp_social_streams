@@ -121,9 +121,9 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
 
     }
 
-    public function hasValidAccessToken()
-    {
-        $this->log($this->service->getAccessToken());
-        parent::hasValidAccessToken();
-    }
+    // public function hasValidAccessToken()
+    // {
+    //     $this->log($this->service->getAccessToken());
+    //     parent::hasValidAccessToken();
+    // }
 }

@@ -14,19 +14,12 @@
 
 	"require": {
 		"php": ">=5.5.0",
-        "and/oauth": "0.6.*",
-		"google/apiclient": "1.0.*@beta",
-        "facebook/php-sdk-v4": "4.0.*",
-        "abraham/twitteroauth": "0.5.*",
-        "cosenary/instagram": "2.3",
-        "happyr/linkedin-api-client": "0.5.*"
+        "and/oauth": "0.6.*"
 	},
 
     "require-dev": {
         "php": "5.5.*",
-        "phpunit/phpunit": "3.7.*",
-        "wp-cli/wp-cli": "0.19.*",
-        "psy/psysh": "dev-master"
+        "phpunit/phpunit": "3.7.*"
     },
 
     "autoload": {

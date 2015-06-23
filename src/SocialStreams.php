@@ -31,8 +31,8 @@ namespace SocialStreams;
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
 require_once 'vendor/autoload.php';
-// require_once 'socialstreams_counter_widget.php';
-// require_once 'socialstreams_options.php';
+require_once 'SocialStreamsCountsWidget.php';
+require_once 'SocialStreamsOptions.php';
 
 class SocialStreams
 {
