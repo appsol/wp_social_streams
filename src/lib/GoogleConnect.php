@@ -35,6 +35,18 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
     }
 
     /**
+     * Set the access type for the Google OAuth endpoint
+     *
+     * @return string
+     * @author Stuart Laverick
+     **/
+    public function getAuthenticationUrl()
+    {
+        $this->service->setAccessType('offline');
+        return parent::getAuthenticationUrl();
+    }
+
+    /**
      * See SocialApiInterface
      * {@inheritdoc}
      **/
@@ -66,7 +78,6 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
             'https://www.googleapis.com/youtube/v3/channels?part=id,snippet,statistics&forUsername=' . $userId
             : 'https://www.googleapis.com/oauth2/v1/userinfo';
         $user = $this->getData($requestUrl, $purgeCache);
-        $this->log($user);
         return $user;
     }
 
@@ -108,5 +119,11 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
             return 'https://www.youtube.com/user/' . $userId;
         }
 
+    }
+
+    public function hasValidAccessToken()
+    {
+        $this->log($this->service->getAccessToken());
+        parent::hasValidAccessToken();
     }
 }

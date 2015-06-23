@@ -31,8 +31,8 @@ namespace SocialStreams;
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
 require_once 'vendor/autoload.php';
-require_once 'socialstreams_counter_widget.php';
-require_once 'socialstreams_options.php';
+// require_once 'socialstreams_counter_widget.php';
+// require_once 'socialstreams_options.php';
 
 class SocialStreams
 {
@@ -117,7 +117,7 @@ class SocialStreams
      **/
     public function register()
     {
-        register_widget('SocialStreams\SocialStreamsCounterWidget');
+        register_widget('SocialStreams\SocialStreamsCountsWidget');
     }
 
     /**

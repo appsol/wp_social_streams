@@ -9,7 +9,7 @@ namespace SocialStreams;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
-class SocialStreamsCounterWidget extends \WP_Widget
+class SocialStreamsCountsWidget extends \WP_Widget
 {
 
   /**
@@ -22,7 +22,7 @@ class SocialStreamsCounterWidget extends \WP_Widget
   {
     parent::__construct(
       'social_streams_count',
-      __('Social Counter', 'wp_social_streams'),
+      __('Social Counts', 'wp_social_streams'),
       ['description' => __('Shows the engagement counts from a range of Social Media networks.')]
       );
   }
@@ -37,8 +37,9 @@ class SocialStreamsCounterWidget extends \WP_Widget
   {
     $ss = SocialStreams::getInstance();
     $defaults = [
-      'title' => __('Social Counts', 'wp_social_streams'),
-      'home_only' => ''
+    'title' => __('Social Counts', 'wp_social_streams'),
+    'home_only' => '',
+    'template' => $this->getDefaultTemplate($instance)
     ];
     foreach ($ss->activeNetworks as $network) {
       $defaults[$network->getNetworkName() . '_count'] = '';
@@ -50,31 +51,35 @@ class SocialStreamsCounterWidget extends \WP_Widget
       <input id="<?php echo $this->get_field_id("title"); ?>"
       name="<?php echo $this->get_field_name("title"); ?>"
       value="<?php echo $instance['title'] ?>" class="widefat" /></p>
-    <?php if (isset($instance['message'])): ?>
+      <?php if (isset($instance['message'])): ?>
         <p class="message"><?php echo $instance['message']; ?></p>
-    <?php endif; ?>
-    <p class="description"><?php _e('Add Entity IDs to show counts from specific users or pages. If left blank the default logged in user will be used.'); ?></p>
-    <?php foreach ($ss->activeNetworks as $network):
-            $countFieldId = $network->getNetworkName() . '_count';
-            $entityFieldId = $network->getNetworkName() . '_entity_id';
-            $countFieldName = 'Show ' . $network->getNiceName() . ' Count';
-            $entityFieldName = $network->getNiceName() . ' Entity ID';
-            $count = $network->getFollowerCount($instance[$entityFieldId]); ?>
-    <p>
-      <input class="checkbox" id="<?php echo $this->get_field_id($countFieldId); ?>" name="<?php echo $this->get_field_name($countFieldId); ?>" type="checkbox" value="yes" <?php if (esc_attr($instance[$countFieldId]) == 'yes') echo 'checked="checked"'; ?> />
-      <label for="<?php echo $this->get_field_id($countFieldId); ?>"><?php _e($countFieldName); ?><?php if($count) echo ' (' . $count . ')'; ?></label>
-      <input id="<?php echo $this->get_field_id($entityFieldId); ?>"
-      name="<?php echo $this->get_field_name($entityFieldId); ?>"
-      value="<?php echo $instance[$entityFieldId] ?>"
-      placeholder="<?php _e($entityFieldName); ?>" class="widefat" />
-    </p>
-    <?php endforeach; ?>
+      <?php endif; ?>
+      <p class="description"><?php _e('Add Entity IDs to show counts from specific users or pages. If left blank the default logged in user will be used.'); ?></p>
+      <?php foreach ($ss->activeNetworks as $network):
+      $countFieldId = $network->getNetworkName() . '_count';
+      $entityFieldId = $network->getNetworkName() . '_entity_id';
+      $countFieldName = 'Show ' . $network->getNiceName() . ' Count';
+      $entityFieldName = $network->getNiceName() . ' Entity ID';
+      $count = $network->getFollowerCount($instance[$entityFieldId]); ?>
       <p>
-        <input class="checkbox" id="<?php echo $this->get_field_id('home_only'); ?>" name="<?php echo $this->get_field_name('home_only'); ?>" type="checkbox" value="yes" <?php if (esc_attr($instance['home_only']) == 'yes') echo 'checked="checked"'; ?> />
-        <label for="<?php echo $this->get_field_id('home_only'); ?>"><?php _e('Display on Home page only'); ?></label>
+        <input class="checkbox" id="<?php echo $this->get_field_id($countFieldId); ?>" name="<?php echo $this->get_field_name($countFieldId); ?>" type="checkbox" value="yes" <?php if (esc_attr($instance[$countFieldId]) == 'yes') echo 'checked="checked"'; ?> />
+        <label for="<?php echo $this->get_field_id($countFieldId); ?>"><?php _e($countFieldName); ?><?php if($count) echo ' (' . $count . ')'; ?></label>
+        <input id="<?php echo $this->get_field_id($entityFieldId); ?>"
+        name="<?php echo $this->get_field_name($entityFieldId); ?>"
+        value="<?php echo $instance[$entityFieldId] ?>"
+        placeholder="<?php _e($entityFieldName); ?>" class="widefat" />
       </p>
-      <?php
-    }
+    <?php endforeach; ?>
+    <p>
+      <label for="<?php echo $this->get_field_id('template'); ?>"><?php _e('Count Totals HTML'); ?></label>
+      <textarea id="<?php echo $this->get_field_id('template'); ?>" name="<?php echo $this->get_field_name('template'); ?>" rows="10" cols="30"><?php echo $instance['template'] ?></textarea>
+    </p>
+    <p>
+      <input class="checkbox" id="<?php echo $this->get_field_id('home_only'); ?>" name="<?php echo $this->get_field_name('home_only'); ?>" type="checkbox" value="yes" <?php if (esc_attr($instance['home_only']) == 'yes') echo 'checked="checked"'; ?> />
+      <label for="<?php echo $this->get_field_id('home_only'); ?>"><?php _e('Display on Home page only'); ?></label>
+    </p>
+    <?php
+  }
 
     /**
      * Update the settings for this instance of the widget
@@ -90,6 +95,7 @@ class SocialStreamsCounterWidget extends \WP_Widget
       $instance['message'] = '';
 
       $instance['title'] = $new_instance['title'];
+      $instance['template'] = $new_instance['template'];
         // Only show this on the home page?
       $instance['home_only'] = isset($new_instance['home_only'])? 'yes' : 'no';
       // Update for Active Networks
@@ -117,26 +123,28 @@ class SocialStreamsCounterWidget extends \WP_Widget
       }
       $ss = SocialStreams::getInstance();
       $totalCount = 0;
+      $keys = $values = [];
 
       $title = apply_filters('widget_title', $instance['title']);
-      $body = ['<dl>'];
+      $body = $instance['template'];
       foreach ($ss->activeNetworks as $network) {
         if ($instance[$network->getNetworkName() . '_count'] === 'yes') {
           $count = $network->getFollowerCount($instance[$network->getNetworkName() . '_entity_id']);
           $url = $network->getProfileUrl($instance[$network->getNetworkName() . '_entity_id']);
           $totalCount+= $count;
-          $body[] = '<dt class="network-name ' . $network->getNetworkName() . '"><a href="' . $url . '">'
-                . $network->getNiceName() . '</a></dt>';
-          $body[] = '<dd>' . $count . ' <span class="follower-name">' . $network->getFollowerName(true) . '</span></dd>';
+          $keys[] = '[[' . $network->getNetworkName() . '_count]]';
+          $values[] = '<a href="' . $url . '"><span class="network-name">' . $network->getNiceName() . '</span> '
+          . $count . ' <span class="follower-name">' . $network->getFollowerName(true) . '</span></a>';
         }
       }
-      $body[] = '</dl>';
+      $keys[] = '[[total_count]]';
+      $values[] = _('Total Followers: ') . $totalCount;
+      $body = str_replace($keys, $values, $body);
       $html = [$before_widget];
       if ($title) {
         $html[] = $before_title . $title . $after_title;
       }
-      $html[] = '<p>' . _('Total Followers: ') . $totalCount . '</p>';
-      $html[] = implode("\n", $body);
+      $html[] = $body;
       $html[] = $after_widget;
 
       echo implode("\n", $html);
@@ -157,7 +165,7 @@ class SocialStreamsCounterWidget extends \WP_Widget
     }
 
     /**
-     * Returns a connection object for the spcified social network
+     * Returns a connection object for the specified social network
      *
      * @return SocialApiInterface object
      * @author Stuart Laverick
@@ -170,5 +178,28 @@ class SocialStreamsCounterWidget extends \WP_Widget
         return $connection;
       }
       return false;
+    }
+
+    /**
+     * undocumented function
+     *
+     * @return void
+     * @author 
+     **/
+    private function getDefaultTemplate($instance)
+    {
+      $ss = SocialStreams::getInstance();
+      $template = ['<div class="social-counts">'];
+      $template[] = '<p class="network-counts-total">[[total_count]]</p>';
+      $template[] = '<ul class="network-counts">';
+      foreach ($ss->activeNetworks as $network) {
+        if ($instance[$network->getNetworkName() . '_count'] === 'yes') {
+          $template[] = '<li class="network-count ' . $network->getNetworkName() . '">[[' . $network->getNetworkName() . '_count]]</li>';
+        }
+      }
+      $template[] = '</ul>';
+      $template[] = '</div>';
+
+      return implode("\n", $template);
     }
   }
