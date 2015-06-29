@@ -28,6 +28,7 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
         parent::__construct($appId, $appSecret);
 
         $this->initialiseService([Linkedin::SCOPE_R_BASICPROFILE]);
+        // $this->service->getHTTPTransporter()->setOption()
     }
 
     /**
@@ -61,7 +62,7 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
         $userId = $userId? : '~';
         $requestUrl = 'people/' . $userId . '?format=json';
         $user = $this->getData($requestUrl, $purgeCache);
-
+        $this->log($user);
         return $user;
     }
 
@@ -71,11 +72,18 @@ class LinkedinConnect extends SocialApiConnect implements SocialApiInterface
      **/
     public function getFollowerCount($userId = '', $purgeCache = false)
     {
-        $userId = $userId? : '~';
+        // $userId = $userId? : '~';
+        if (!$userId) {
+            $userId = $this->getUser()['id'];
+        }
         $requestUrl =  'people/' . $userId . ':(id,num-connections,num-connections-capped)?format=json';
         $count = false;
-        if ($result = $this->getData($requestUrl, $purgeCache)) {
+        $result = $this->getData($requestUrl, $purgeCache);
+        $this->log($result);
+        if ($result && !isset($result['errorCode'])) {
             $count = $result['num-connections'];
+        } elseif (isset($result['errorCode'])) {
+            $this->deleteTemporaryData($requestUrl);
         }
 
         return $count;

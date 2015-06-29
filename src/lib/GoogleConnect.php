@@ -31,7 +31,7 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
 
         parent::__construct($appId, $appSecret);
 
-        $this->initialiseService($scope);
+        $this->initialiseService($scope, 'https://www.googleapis.com/youtube/v3/');
     }
 
     /**
@@ -75,7 +75,7 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
     public function getUser($userId = '', $purgeCache = false)
     {
         $requestUrl = $userId?
-            'https://www.googleapis.com/youtube/v3/channels?part=id,snippet,statistics&forUsername=' . $userId
+            'channels?part=id,snippet,statistics&forUsername=' . $userId
             : 'https://www.googleapis.com/oauth2/v1/userinfo';
         $user = $this->getData($requestUrl, $purgeCache);
         return $user;
@@ -97,7 +97,7 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
             }
 
         } else {
-            $requestUrl = 'https://www.googleapis.com/youtube/v3/subscriptions?part=id&mySubscribers=true';
+            $requestUrl = 'subscriptions?part=id&mySubscribers=true';
 
             if ($result = $this->getData($requestUrl, $purgeCache)) {
                 $count = $result['pageInfo']['totalResults'];
@@ -120,10 +120,4 @@ class GoogleConnect extends SocialApiConnect implements SocialApiInterface
         }
 
     }
-
-    // public function hasValidAccessToken()
-    // {
-    //     $this->log($this->service->getAccessToken());
-    //     parent::hasValidAccessToken();
-    // }
 }

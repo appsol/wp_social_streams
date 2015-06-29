@@ -10,6 +10,7 @@ namespace SocialStreams;
 use OAuth\Common\Token\TokenInterface;
 use OAuth\Common\Consumer\Credentials;
 use OAuth\ServiceFactory;
+use OAuth\Common\Http\Url;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
@@ -154,7 +155,7 @@ abstract class SocialApiConnect
         $this->log($requestUrl);
         $result = $this->getTemporaryData($requestUrl);
         if (!$result || $purgeCache) {
-            if($result = $this->queryApi($requestUrl)) {
+            if ($result = $this->queryApi($requestUrl)) {
                 $this->storeTemporaryData($requestUrl, $result);
             }
         }
@@ -224,7 +225,7 @@ abstract class SocialApiConnect
      * @return bool
      * @author Stuart Laverick
      **/
-    protected function initialiseService(Array $scopes = [])
+    protected function initialiseService(Array $scopes = [], $baseApiUrl = '')
     {
         $credentials = new Credentials(
             $this->appId,
@@ -237,11 +238,13 @@ abstract class SocialApiConnect
         $serviceFactory = new ServiceFactory();
 
         $serviceFactory->setHttpTransporter('Curl', [
-                'ignoreErrors' => TRUE,
+                'ignoreErrors' => true,
                 'maxRedirects' => 5,
                 'timeout' => 5,
-                'verifyPeer' => FALSE
+                'verifyPeer' => false
             ]);
+        $baseApiUrl = $baseApiUrl? new Url($baseApiUrl) : null;
+        $apiVersion = null;
 
         try {
             if ($this->service = $serviceFactory->createService(
@@ -249,8 +252,8 @@ abstract class SocialApiConnect
                 $credentials,
                 $storage,
                 $scopes,
-                null,
-                true
+                $baseApiUrl,
+                $apiVersion
             )) {
                 return true;
             }
@@ -269,12 +272,13 @@ abstract class SocialApiConnect
      **/
     public function hasValidAccessToken()
     {
-        if ($this->service && $this->service->getStorage()->hasAccessToken($this->apiName)) {
+        if ($this->service) {
             try {
                     $token = $this->service->getAccessToken();
+                    $this->log(get_class($this));
+                    $this->log($token);
                     return ! $token->isExpired();
-            }
-            catch (TokenNotFoundException $e) {
+            } catch (\OAuth\Common\Storage\Exception\TokenNotFoundException $e) {
                 $this->setLastMessage($e->getMessage());
                 return false;
             }
@@ -313,18 +317,63 @@ abstract class SocialApiConnect
         if ($this->service->isGlobalRequestArgumentsPassed()
             && isset($_GET['callback'])
             && $_GET['callback'] == $this->apiName) {
-            try {
-                $this->service->retrieveAccessTokenByGlobReqArgs();
-                if ($this->hasValidAccessToken()) {
-                    $this->getUser('', true);
-                    $this->deleteLastMessage();
-                    return true;
-                }
-            } catch (\Exception $e) {
-                $this->setLastMessage($e->getMessage(), $e->getCode());
-            }
+            $token = $this->getAccessTokenFromAuthorizationCode();
+        } elseif ($this->service->getStorage()->hasAccessToken($this->apiName)) {
+            $token = $this->getAccessTokenWithRefreshToken($this->getToken());
         }
-        return false;
+
+        if (! $this->hasValidAccessToken()) {
+            return false;
+        }
+
+        $this->getUser('', true);
+        $this->deleteLastMessage();
+        return true;
+    }
+
+    /**
+     * See SocialApiInterface
+     * {@inheritdoc}
+     **/
+    public function getToken()
+    {
+        return $this->service->getAccessToken();
+    }
+
+    /**
+     * Retrieves the Access Token from a passed Authorisation Code
+     *
+     * @return bool
+     * @author Stuart Laverick
+     **/
+    protected function getAccessTokenFromAuthorizationCode()
+    {
+        try {
+            $token = $this->service->retrieveAccessTokenByGlobReqArgs();
+        } catch (\Exception $e) {
+            $this->setLastMessage($e->getMessage(), $e->getCode());
+            return false;
+        }
+        return $token;
+    }
+
+    /**
+     * Refreshes the Access Token from a stored Refresh Token
+     *
+     * @return void
+     * @author 
+     **/
+    protected function getAccessTokenWithRefreshToken(TokenInterface $token)
+    {
+        try {
+            $token = $this->service->refreshAccessToken($token);
+        } catch (\OAuth\OAuth2\Service\Exception\MissingRefreshTokenException $e) {
+            return false;
+        } catch (\Exception $e) {
+            $this->setLastMessage($e->getMessage(), $e->getCode());
+            return false;
+        }
+        return $token;
     }
 
     /**
@@ -361,9 +410,13 @@ abstract class SocialApiConnect
                 $this->log(json_last_error_msg());
                 $this->setLastMessage(json_last_error_msg());
             }
-        } catch (ExpiredTokenException $e) {
+        } catch (\OAuth\Common\Token\Exception\ExpiredTokenException $e) {
+            // Token expired so try to refresh and have another go
             $this->log($e->getMessage());
             $this->setLastMessage($e->getMessage(), $e->getCode());
+            if ($this->getAccessTokenWithRefreshToken($this->service->getAccessToken())) {
+                return $this->queryApi($requestUrl);
+            }
         } catch (\Exception $e) {
           // Some other error occurred
             $this->log($e->getMessage());
@@ -380,15 +433,18 @@ abstract class SocialApiConnect
      * @return void
      * @author Stuart Laverick
      */
-    public static function log($message = '', $backtrace = false) {
+    public static function log($message = '', $backtrace = false)
+    {
         if (WP_DEBUG === true) {
             $trace = debug_backtrace();
             $caller = $trace[1];
             error_log(isset($caller['class']) ? $caller['class'] . '::' . $caller['function'] : $caller['function']);
-            if ($message)
+            if ($message) {
                 error_log(is_array($message) || is_object($message) ? print_r($message, true) : $message);
-            if ($backtrace)
+            }
+            if ($backtrace) {
                 error_log(print_r($backtrace, true));
+            }
         }
     }
 }

@@ -41,10 +41,6 @@ class SocialStreamsCountsWidget extends \WP_Widget
     'home_only' => '',
     'template' => $this->getDefaultTemplate($instance)
     ];
-    foreach ($ss->activeNetworks as $network) {
-      $defaults[$network->getNetworkName() . '_count'] = '';
-      $defaults[$network->getNetworkName() . '_entity_id'] = '';
-    }
     $instance = wp_parse_args((array) $instance, $defaults);
     ?>
     <p><label for="<?php echo $this->get_field_id("title"); ?>"><?php _e('Title'); ?>:</label>
@@ -74,6 +70,7 @@ class SocialStreamsCountsWidget extends \WP_Widget
       <label for="<?php echo $this->get_field_id('template'); ?>"><?php _e('Count Totals HTML'); ?></label>
       <textarea id="<?php echo $this->get_field_id('template'); ?>" name="<?php echo $this->get_field_name('template'); ?>" rows="10" cols="30"><?php echo $instance['template'] ?></textarea>
     </p>
+    <p class="message">Shortcodes: [social_count network="xxxx"] <?php _e('replace xxxx with the name of the network'); ?></p>
     <p>
       <input class="checkbox" id="<?php echo $this->get_field_id('home_only'); ?>" name="<?php echo $this->get_field_name('home_only'); ?>" type="checkbox" value="yes" <?php if (esc_attr($instance['home_only']) == 'yes') echo 'checked="checked"'; ?> />
       <label for="<?php echo $this->get_field_id('home_only'); ?>"><?php _e('Display on Home page only'); ?></label>
@@ -102,7 +99,7 @@ class SocialStreamsCountsWidget extends \WP_Widget
       foreach ($ss->activeNetworks as $network) {
         $network->getFollowerCount($instance[$network->getNetworkName() . '_entity_id'], true);
         $instance[$network->getNetworkName() . '_count'] = isset($new_instance[$network->getNetworkName() . '_count'])? 'yes' : 'no';
-        $instance[$network->getNetworkName() . '_entity_id'] = $new_instance[$network->getNetworkName() . '_entity_id'];
+        $instance[$network->getNetworkName() . '_entity_id'] = strtolower($new_instance[$network->getNetworkName() . '_entity_id']);
       }
 
       return $instance;
@@ -122,29 +119,30 @@ class SocialStreamsCountsWidget extends \WP_Widget
         return;
       }
       $ss = SocialStreams::getInstance();
-      $totalCount = 0;
-      $keys = $values = [];
 
       $title = apply_filters('widget_title', $instance['title']);
       $body = $instance['template'];
       foreach ($ss->activeNetworks as $network) {
-        if ($instance[$network->getNetworkName() . '_count'] === 'yes') {
-          $count = $network->getFollowerCount($instance[$network->getNetworkName() . '_entity_id']);
-          $url = $network->getProfileUrl($instance[$network->getNetworkName() . '_entity_id']);
-          $totalCount+= $count;
-          $keys[] = '[[' . $network->getNetworkName() . '_count]]';
-          $values[] = '<a href="' . $url . '"><span class="network-name">' . $network->getNiceName() . '</span> '
-          . $count . ' <span class="follower-name">' . $network->getFollowerName(true) . '</span></a>';
+        if (isset($instance[$network->getNetworkName() . '_entity_id'])) {
+          $body = str_replace(
+            '[social_count network="' . $network->getNetworkName() . '"]',
+            '[social_count network="' . $network->getNetworkName() . '" entity="' . $instance[$network->getNetworkName() . '_entity_id'] . '"]',
+            $body
+          );
         }
       }
-      $keys[] = '[[total_count]]';
-      $values[] = _('Total Followers: ') . $totalCount;
-      $body = str_replace($keys, $values, $body);
+
+      $body = str_replace(
+        '[social_total]',
+        $this->getTotalFollowerCount($instance),
+        $body
+      );
+
       $html = [$before_widget];
       if ($title) {
         $html[] = $before_title . $title . $after_title;
       }
-      $html[] = $body;
+      $html[] = do_shortcode($body);
       $html[] = $after_widget;
 
       echo implode("\n", $html);
@@ -157,44 +155,33 @@ class SocialStreamsCountsWidget extends \WP_Widget
      * @return int Follower Count
      * @author Stuart Laverick
      **/
-    private function getDefaultEntityFollowerCount($service, $update = false)
+    private function getTotalFollowerCount($instance)
     {
-      if($connection = $this->getConnection($service)) {
-        return $connection->getFollowerCount('', $update);
+      $ss = SocialStreams::getInstance();
+      $totalCount = 0;
+      foreach ($ss->activeNetworks as $network) {
+        if (isset($instance[$network->getNetworkName() . '_count'])) {
+          $totalCount+= (int) $network->getFollowerCount($instance[$network->getNetworkName() . '_entity_id']);
+        }
       }
+      return __('Total Followers:') . '<span class="follower-count">' . $totalCount . '</span> ';
     }
 
     /**
-     * Returns a connection object for the specified social network
+     * Returns an HTML template with shortcodes for all active networks
      *
-     * @return SocialApiInterface object
+     * @return string
      * @author Stuart Laverick
-     **/
-    private function getConnection($service)
-    {
-      $connectionFactory = new ConnectionFactory();
-      $connection = $connectionFactory->createConnection($service);
-      if ($connection->hasSession()) {
-        return $connection;
-      }
-      return false;
-    }
-
-    /**
-     * undocumented function
-     *
-     * @return void
-     * @author 
      **/
     private function getDefaultTemplate($instance)
     {
       $ss = SocialStreams::getInstance();
       $template = ['<div class="social-counts">'];
-      $template[] = '<p class="network-counts-total">[[total_count]]</p>';
+      $template[] = '<p class="network-counts-total">[social_total]</p>';
       $template[] = '<ul class="network-counts">';
       foreach ($ss->activeNetworks as $network) {
         if ($instance[$network->getNetworkName() . '_count'] === 'yes') {
-          $template[] = '<li class="network-count ' . $network->getNetworkName() . '">[[' . $network->getNetworkName() . '_count]]</li>';
+          $template[] = '<li class="network-count ' . $network->getNetworkName() . '">[social_count network="' . $network->getNetworkName() . '"]</li>';
         }
       }
       $template[] = '</ul>';

@@ -284,9 +284,48 @@ class SocialStreamsOptions
      * @return void
      * @author Stuart Laverick
      **/
-    public function printSocialMediaApiInfo()
+    public function printSocialMediaApiInfo(SocialApiInterface $connection, $userName = '')
     {
-        print "Enter your API keys and Authentication details";
+        if ($connection->hasSession() && $userName) {
+            printf(
+                '<p>%s %s <a class="button button-secondary" href="%s">%s</a></p>',
+                __('Connected as', 'wp_social_streams'),
+                $userName,
+                $connection->getDisconnectUrl(),
+                __('Disconnect', 'wp_social_streams')
+            );
+        } else {
+            if ($msg = $connection->getLastMessage()) {
+                printf(
+                    '<div class="updated"><p>%s</p></div>',
+                    esc_html__($msg['message'], 'wp_social_streams')
+                );
+            }
+            printf(
+                '<p><a class="button button-secondary" href="%s">%s</a></p>',
+                $connection->getAuthenticationUrl(),
+                __('Connect', 'wp_social_streams')
+            );
+        }
+        try {
+                $token = $connection->getToken();
+                switch ($token->getEndOfLife()) {
+                    case \OAuth\Common\Token\TokenInterface::EOL_UNKNOWN:
+                        $eol = __('Unknown Token Lifespan', 'wp_social_streams');
+                        break;
+                    case \OAuth\Common\Token\TokenInterface::EOL_NEVER_EXPIRES:
+                        $eol = __('Indefinite Token Lifespan', 'wp_social_streams');
+                        break;
+                    default:
+                        $eol = date('Y-m-d H:m:s', $token->getEndOfLife());
+                        break;
+                }
+                printf(
+                    '<p class="description">%s</p>',
+                    __('End of Life: ') . $eol
+                );
+        } catch (\OAuth\Common\Storage\Exception\TokenNotFoundException $e) {
+        }
     }
 
     /**
@@ -299,16 +338,13 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['facebook_app_id']) && !empty($this->options['facebook_app_secret'])) {
             $fbConnect = $this->connectionFactory->createConnection('facebook');
-            if ($fbConnect->hasSession() && $user = $fbConnect->getUser()) {
-                print '<p>Connected as ' . $user['name'] . ' <a class="button button-secondary" href="' . $fbConnect->getDisconnectUrl() . '">Disconnect</a></p>';
-            } else {
-                if ($msg = $fbConnect->getLastMessage()) {
-                    print '<p>' . $msg['message'] . '</p>';
-                }
-                print '<p><a class="button button-secondary" href="' . $fbConnect->getAuthenticationUrl() . '">Connect</a></p>';
-            }
+            $user = $fbConnect->getUser();
+            $this->printSocialMediaApiInfo($fbConnect, isset($user['name'])? $user['name'] : '');
         } else {
-            print '<p>Enter your Facebook API keys. See <a target="_blank" href="https://developers.facebook.com/apps/">Facebook Developer Apps</a></p>';
+            printf('<p>%s <a target="_blank" href="https://developers.facebook.com/apps/">%s</a></p>',
+                __('Enter your Facebook API keys. See', 'wp_social_streams'),
+                __('Facebook Developer Apps', 'wp_social_streams')
+                );
         }
     }
 
@@ -322,16 +358,13 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['google_app_id']) && !empty($this->options['google_app_secret'])) {
             $ggConnect = $this->connectionFactory->createConnection('google');
-            if ($ggConnect->hasSession() && $user = $ggConnect->getUser()) {
-                print '<p>Connected as ' . $user['name'] . ' <a class="button button-secondary" href="' . $ggConnect->getDisconnectUrl() . '">Disconnect</a></p>';
-            } else {
-                if ($msg = $ggConnect->getLastMessage()) {
-                    print '<p>' . $msg['message'] . '</p>';
-                }
-                print '<p><a class="button button-secondary" href="' . $ggConnect->getAuthenticationUrl() . '">Connect</a></p>';
-            }
+            $user = $ggConnect->getUser();
+            $this->printSocialMediaApiInfo($ggConnect, isset($user['name'])? $user['name'] : '');
         } else {
-            print '<p>Enter your Google API keys. These can be used for many Google services (e.g. YouTube, etc) See <a target="_blank" href="https://console.developers.google.com/project?authuser=0">Google Developers Console</a></p>';
+            printf('<p>%s <a target="_blank" href="https://console.developers.google.com/project?authuser=0">%s</a></p>',
+                __('Enter your Google API keys. These can be used for many Google services (e.g. YouTube, etc) See', 'wp_social_streams'),
+                __('Google Developers Console', 'wp_social_streams')
+                );
         }
     }
 
@@ -345,16 +378,13 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['twitter_app_id']) && !empty($this->options['twitter_app_secret'])) {
             $twConnect = $this->connectionFactory->createConnection('twitter');
-            if ($twConnect->hasSession() && $user = $twConnect->getUser()) {
-                print '<p>Connected as ' . $user['name'] . ' <a class="button button-secondary" href="' . $twConnect->getDisconnectUrl() . '">Disconnect</a></p>';
-            } else {
-                if ($msg = $twConnect->getLastMessage()) {
-                    print '<p>' . $msg['message'] . '</p>';
-                }
-                print '<p><a class="button button-secondary" href="' . $twConnect->getAuthenticationUrl() . '">Connect</a></p>';
-            }
+            $user = $twConnect->getUser();
+            $this->printSocialMediaApiInfo($twConnect, isset($user['name'])? $user['name'] : '');
         } else {
-            print '<p>Enter your API keys. See <a target="_blank" href="https://apps.twitter.com/">Twitter Application Management</a></p>';
+            printf('<p>%s <a target="_blank" href="https://apps.twitter.com/">%s</a></p>',
+                __('Enter your Twitter API keys. See', 'wp_social_streams'),
+                __('Twitter Application Management', 'wp_social_streams')
+                );
         }
     }
 
@@ -368,16 +398,13 @@ class SocialStreamsOptions
     {
         if (!empty($this->options['instagram_app_id']) && !empty($this->options['instagram_app_secret'])) {
             $igConnect = $this->connectionFactory->createConnection('instagram');
-            if ($igConnect->hasSession() && $user = $igConnect->getUser()) {
-                print '<p>Connected as ' . $user['full_name'] . ' <a class="button button-secondary" href="' . $igConnect->getDisconnectUrl() . '">Disconnect</a></p>';
-            } else {
-                if ($msg = $igConnect->getLastMessage()) {
-                    print '<p>' . $msg['message'] . '</p>';
-                }
-                print '<p><a class="button button-secondary" href="' . $igConnect->getAuthenticationUrl() . '">Connect</a></p>';
-            }
+            $user = $igConnect->getUser();
+            $this->printSocialMediaApiInfo($igConnect, isset($user['full_name'])? $user['full_name'] : '');
         } else {
-            print '<p>Enter your Instagram API keys. See <a target="_blank" href="https://instagram.com/developer/clients/manage/">Instagram Manage Clients</a></p>';
+            printf('<p>%s <a target="_blank" href="https://instagram.com/developer/clients/manage/">%s</a></p>',
+                __('Enter your Instagram API keys. See', 'wp_social_streams'),
+                __('Instagram Manage Clients', 'wp_social_streams')
+                );
         }
     }
 
@@ -390,18 +417,14 @@ class SocialStreamsOptions
     public function printLinkedinApiInfo()
     {
         if (!empty($this->options['linkedin_app_id']) && !empty($this->options['linkedin_app_secret'])) {
-
                 $liConnect = $this->connectionFactory->createConnection('linkedin');
-                if ($liConnect->hasSession() && $user = $liConnect->getUser()) {
-                    print '<p>Connected as ' . $user['firstName'] . ' ' . $user['lastName'] . ' <a class="button button-secondary" href="' . $liConnect->getDisconnectUrl() . '">Disconnect</a></p>';
-                } else {
-                    if ($msg = $liConnect->getLastMessage()) {
-                        print '<p>' . $msg['message'] . '</p>';
-                    }
-                    print '<p><a class="button button-secondary" href="' . $liConnect->getAuthenticationUrl() . '">Connect</a></p>';
-                }
+                $user = $liConnect->getUser();
+                $this->printSocialMediaApiInfo($liConnect, isset($user['firstName'])? $user['firstName'] . ' ' . $user['lastName'] : '');
         } else {
-            print '<p>Enter your LinkedIn API keys. See <a target="_blank" href="https://www.linkedin.com/developer/apps">LinkedIn My Applications</a></p>';
+            printf('<p>%s <a target="_blank" href="https://www.linkedin.com/developer/apps">%s</a></p>',
+                __('Enter your LinkedIn API keys. See', 'wp_social_streams'),
+                __('LinkedIn My Applications', 'wp_social_streams')
+                );
         }
     }
 

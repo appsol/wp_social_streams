@@ -70,8 +70,8 @@ class SocialStreams
      **/
     public function __construct()
     {
-        add_action("widgets_init", [$this, 'register']);
-        add_shortcode('social_streams', [$this, 'shortcodeHandler']);
+        add_action("init", [$this, 'registerShortcodes']);
+        add_action("widgets_init", [$this, 'registerWidget']);
 
         if (is_admin()) {
             $optionsPage = new SocialStreamsOptions();
@@ -85,7 +85,7 @@ class SocialStreams
         foreach ($networks as $network) {
             if (!empty($options[$network . '_app_id']) && !empty($options[$network . '_app_secret'])) {
                 $connection = $connectionFactory->createConnection($network);
-                if ($connection->hasSession()) {
+                if ($connection->getUser()) {
                     $this->activeNetworks[$network] = $connection;
                 }
             }
@@ -115,9 +115,21 @@ class SocialStreams
      * @return void
      * @author Stuart Laverick
      **/
-    public function register()
+    public function registerWidget()
     {
         register_widget('SocialStreams\SocialStreamsCountsWidget');
+    }
+
+    /**
+     * Regiter shortcodes that are made available
+     *
+     * @return void
+     * @author Stuart Laverick
+     **/
+    public function registerShortcodes()
+    {
+        add_shortcode('social_count', [$this, 'countShortcodeHandler']);
+        // add_shortcode('social_total', [$this, 'totalShortcodeHandler']);
     }
 
     /**
@@ -135,28 +147,59 @@ class SocialStreams
         }
 
         if (!empty($options['load_js'])) {
-            wp_enqueue_script('jcarousel', 'https://cdnjs.cloudflare.com/ajax/libs/jcarousel/0.3.3/jquery.jcarousel.min.js', ['jquery'], '0.3.3', true);
-            wp_enqueue_script('wp-video-playlists', plugin_dir_url(__FILE__) . 'assets/js/main.js', ['jcarousel'], '0.3.0', true);
+            // wp_enqueue_script('jcarousel', 'https://cdnjs.cloudflare.com/ajax/libs/jcarousel/0.3.3/jquery.jcarousel.min.js', ['jquery'], '0.3.3', true);
+            // wp_enqueue_script('wp-video-playlists', plugin_dir_url(__FILE__) . 'assets/js/main.js', ['jcarousel'], '0.3.0', true);
         }
     }
 
     /**
-     * Handler for shortcode calls
+     * Handler for Social Count shortcode calls
      *
      * Options:
+     * network - the id of a network (facebook, twitter, etc)
+     * entity - a username on the network or blank for the authenticated user
      *
      * @return string HTML of the player
      * @author Stuart Laverick
      **/
-    public function shortcodeHandler($attributes)
+    public function countShortcodeHandler($attributes)
     {
-        extract(shortcode_atts(array(
-            
-                        ), $attributes));
+        extract(shortcode_atts([
+            'network' => '',
+            'entity' => null
+        ], $attributes, 'social_count'));
 
-        
+        if ($network && isset($this->activeNetworks[$network])) {
+            $count = $this->activeNetworks[$network]->getFollowerCount($entity);
+              $url = $this->activeNetworks[$network]->getProfileUrl($entity);
+          return '<a href="' . $url . '"><span class="network-name">' . $this->activeNetworks[$network]->getNiceName() . '</span> '
+          . '<span class="follower-count">' . $count . '</span> '
+          . '<span class="follower-name">' . $this->activeNetworks[$network]->getFollowerName(true) . '</span></a>';
+        }
 
         return false;
+    }
+
+    /**
+     * undocumented function
+     *
+     * @return void
+     * @author 
+     **/
+    public function totalShortcodeHandler($attributes)
+    {
+        $defaults = [];
+        foreach ($this->activeNetworks as $network) {
+            $defaults[$network->getNetworkName()] = '';
+        }
+        $atts = shortcode_atts($defaults, $attributes, 'social_total');
+        $totalCount = 0;
+        foreach ($this->activeNetworks as $network) {
+            if ($atts[$network->getNetworkName()]) {
+                $totalCount+= (int) $network->getFollowerCount($atts[$network->getNetworkName()]);
+            }
+        }
+        return __('Total Followers:') . '<span class="follower-count">' . $totalCount . '</span> ';
     }
 }
 

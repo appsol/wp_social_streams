@@ -85,6 +85,14 @@ interface SocialApiInterface
     public function deleteSession();
 
     /**
+     * Returns the stored OAuth Token object
+     *
+     * @return OAuth\Common\Token\TokenInterface
+     * @author 
+     **/
+    public function getToken();
+
+    /**
      * Get the last message property
      *
      * @return Array|Bool

@@ -73,6 +73,14 @@ class TransientTokenStore implements TokenStorageInterface
      */
     public function storeAccessToken($service, TokenInterface $token)
     {
+        try {
+            $oldToken = $this->retrieveAccessToken($service);
+            if (! $token->getRefreshToken() && $oldToken->getRefreshToken()) {
+                $token->setRefreshToken($oldToken->getRefreshToken());
+            }
+        } catch (TokenNotFoundException $e) {
+
+        }
         $this->tokens[ $this->normaliseServiceName($service) ] = $token;
         $this->updateTransient('tokens');
 
