@@ -5,7 +5,7 @@
  * @package wp_social_streams
  * @author Stuart Laverick
  */
-namespace SocialStreams;
+namespace AppSol\SocialStreams;
 
 use OAuth\Common\Storage\Exception\AuthorizationStateNotFoundException;
 use OAuth\Common\Storage\Exception\StorageException;

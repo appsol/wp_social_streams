@@ -5,7 +5,7 @@
  * @package wp_social_streams
  * @author Stuart Laverick
  */
-namespace SocialStreams;
+namespace AppSol\SocialStreams;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 

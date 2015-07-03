@@ -6,7 +6,7 @@
  * @author Stuart Laverick
  */
 
-namespace SocialStreams;
+namespace AppSol\SocialStreams;
 
 use OAuth\OAuth2\Service\Facebook;
 

@@ -24,8 +24,7 @@
 
     "autoload": {
         "psr-4": {
-            "SocialStreams\\": "",
-            "SocialStreams\\": "lib/"
+            "AppSol\\SocialStreams\\": ["", "lib/"]
         }
     }
 }

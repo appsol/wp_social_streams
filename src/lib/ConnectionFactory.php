@@ -6,7 +6,7 @@
  * @author Stuart Laverick
  */
 
-namespace SocialStreams;
+namespace AppSol\SocialStreams;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 

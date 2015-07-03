@@ -3,7 +3,7 @@
  * Plugin Name: WP Social Streams
  * Plugin URI: http://www.appropriatesolutions.co.uk/
  * Description: Displays metrics and posts from social media
- * Version: 2.1.0
+ * Version: 2.1.1
  * Author: Stuart Laverick
  * Author URI: http://www.appropriatesolutions.co.uk/
  * Text Domain: Optional. wp_social_streams
@@ -26,13 +26,15 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-namespace SocialStreams;
+namespace AppSol\SocialStreams;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
-require_once 'vendor/autoload.php';
-require_once 'SocialStreamsCountsWidget.php';
-require_once 'SocialStreamsOptions.php';
+use AppSol\SocialStreams\ConnectionFactory;
+use AppSol\SocialStreams\SocialStreamsOptions;
+use AppSol\SocialStreams\SocialStreamsCountsWidget;
+
+require_once dirname(__FILE__) . '/vendor/autoload.php';
 
 class SocialStreams
 {
@@ -117,7 +119,7 @@ class SocialStreams
      **/
     public function registerWidget()
     {
-        register_widget('SocialStreams\SocialStreamsCountsWidget');
+        register_widget( new SocialStreamsCountsWidget);
     }
 
     /**
