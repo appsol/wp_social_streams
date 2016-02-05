@@ -30,11 +30,14 @@ namespace AppSol\SocialStreams;
 
 defined('ABSPATH') or die( 'No script kiddies please!' );
 
+require_once dirname(__FILE__) . '/vendor/autoload.php';
+
 use AppSol\SocialStreams\ConnectionFactory;
 use AppSol\SocialStreams\SocialStreamsOptions;
 use AppSol\SocialStreams\SocialStreamsCountsWidget;
 
-require_once dirname(__FILE__) . '/vendor/autoload.php';
+// require_once 'SocialStreamsCountsWidget.php';
+// require_once 'SocialStreamsOptions.php';
 
 class SocialStreams
 {
@@ -119,7 +122,7 @@ class SocialStreams
      **/
     public function registerWidget()
     {
-        register_widget( new SocialStreamsCountsWidget);
+        register_widget('\AppSol\SocialStreams\SocialStreamsCountsWidget');
     }
 
     /**
@@ -174,7 +177,7 @@ class SocialStreams
         if ($network && isset($this->activeNetworks[$network])) {
             $count = $this->activeNetworks[$network]->getFollowerCount($entity);
               $url = $this->activeNetworks[$network]->getProfileUrl($entity);
-          return '<a href="' . $url . '"><span class="network-name">' . $this->activeNetworks[$network]->getNiceName() . '</span> '
+          return '<a class="' . $network . '-count" href="' . $url . '"><span class="network-name">' . $this->activeNetworks[$network]->getNiceName() . '</span> '
           . '<span class="follower-count">' . $count . '</span> '
           . '<span class="follower-name">' . $this->activeNetworks[$network]->getFollowerName(true) . '</span></a>';
         }

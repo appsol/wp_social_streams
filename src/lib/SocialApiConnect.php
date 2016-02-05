@@ -117,7 +117,12 @@ abstract class SocialApiConnect
      **/
     public function getAuthenticationUrl()
     {
-        return $this->service->getAuthorizationUri();
+        try {
+            return $this->service->getAuthorizationUri();
+        } catch (\Exception $e) {
+            $this->setLastMessage($e->getMessage(), $e->getCode());
+        }
+        return false;
     }
 
     /**
@@ -275,8 +280,6 @@ abstract class SocialApiConnect
         if ($this->service) {
             try {
                     $token = $this->service->getAccessToken();
-                    $this->log(get_class($this));
-                    $this->log($token);
                     return ! $token->isExpired();
             } catch (\OAuth\Common\Storage\Exception\TokenNotFoundException $e) {
                 $this->setLastMessage($e->getMessage());
@@ -365,6 +368,10 @@ abstract class SocialApiConnect
      **/
     protected function getAccessTokenWithRefreshToken(TokenInterface $token)
     {
+        $class = get_class($this->service);
+        if ($class::OAUTH_VERSION == 1) {
+            return false;
+        }
         try {
             $token = $this->service->refreshAccessToken($token);
         } catch (\OAuth\OAuth2\Service\Exception\MissingRefreshTokenException $e) {
